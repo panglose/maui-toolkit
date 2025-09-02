@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Maui;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Graphics;
+﻿using Syncfusion.Maui.Toolkit.Graphics.Internals;
 using Syncfusion.Maui.Toolkit.Internals;
-using Syncfusion.Maui.Toolkit.Graphics.Internals;
 using Syncfusion.Maui.Toolkit.Themes;
 
 namespace Syncfusion.Maui.Toolkit.Charts
@@ -257,6 +251,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			null,
 			defaultValueCreator: DefaultActivationMode);
 
+		/// <summary>
+		/// Identifies the <see cref="AutoHide"/> bindable property.
+		/// </summary>
+		/// <remarks>
+		/// Controls whether the trackball is automatically hidden when the pointer (finger or mouse) is released.
+		/// The default value is <c>true</c>. Set to <c>false</c> to keep the trackball visible after a touch gesture.
+		/// </remarks>
+		public static readonly BindableProperty AutoHideProperty = BindableProperty.Create(
+			nameof(AutoHide), typeof(bool), typeof(ChartTrackballBehavior), true);
 		#endregion
 
 		#region Public Properties
@@ -689,6 +692,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			set { SetValue(ActivationModeProperty, value); }
 		}
 
+		/// <summary>
+		/// Gets or sets a value indicating whether the trackball should be automatically hidden on touch gesture
+		/// </summary>
+		/// <value><c>true</c> to hide the trackball automatically on touch gesture; otherwise <c>false</c>. Default is <c>true</c>.</value>
+		public bool AutoHide
+		{
+			get => (bool)GetValue(AutoHideProperty);
+			set => SetValue(AutoHideProperty, value);
+		}
 		#endregion
 
 		#region Constructor
@@ -746,7 +758,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		/// <summary>
 		/// Activate the trackball at the nearest point to the specified location.
 		/// </summary>
-		public void Show(float pointX, float pointY)
+		public virtual void Show(float pointX, float pointY)
 		{
 			if (CartesianChart == null || CartesianChart is not IChart chart || CartesianChart._chartArea is not CartesianChartArea area)
 			{
@@ -856,7 +868,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					}
 				}
 			}
-			else
+			else if (AutoHide)
 			{
 				_canAutoHideOnExit = false;
 				Hide();
@@ -872,7 +884,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 
 			LongPressActive = false;
-			Hide();
+
+			if (AutoHide)
+			{
+				Hide();
+			}
 		}
 
 		/// <inheritdoc/>
@@ -888,7 +904,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				Show(pointX, pointY);
 			}
 
-			if (!IsPressed)
+			if (!IsPressed && AutoHide)
 			{
 				Hide();
 			}
@@ -927,12 +943,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				LongPressActive = false;
 			}
 
-			Hide();
+			if (AutoHide)
+			{
+				Hide();
+			}
 		}
 
 		internal override void OnTouchExit()
 		{
-			if (_canAutoHideOnExit)
+			if (_canAutoHideOnExit && AutoHide)
 			{
 				Hide();
 			}
@@ -1123,10 +1142,10 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		void GenerateTrackballGroupedLabel()
 		{
 			GroupedLabelView ??= new SfTooltip
-				{
-					Duration = double.NaN,
-					Background = _actualLabelStyle.Background
-				};
+			{
+				Duration = double.NaN,
+				Background = _actualLabelStyle.Background
+			};
 
 			var cellContent = new SfItemViewCell
 			{
@@ -1142,25 +1161,25 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					{
 						LineBreakMode = LineBreakMode.NoWrap
 					};
-					label.SetBinding(Label.TextProperty, 
-						BindingHelper.CreateBinding(nameof(TrackballPointInfo.Label), getter: static(TrackballPointInfo info) => info.Label));
+					label.SetBinding(Label.TextProperty,
+						BindingHelper.CreateBinding(nameof(TrackballPointInfo.Label), getter: static (TrackballPointInfo info) => info.Label));
 					label.VerticalOptions = LayoutOptions.Fill;
 					label.HorizontalOptions = LayoutOptions.Fill;
 					label.VerticalTextAlignment = TextAlignment.Center;
 					label.HorizontalTextAlignment = TextAlignment.Center;
-					label.SetBinding(Label.TextColorProperty, 
-						BindingHelper.CreateBinding(nameof(ChartLabelStyle.TextColor), getter: static(ChartLabelStyle labelStyle) => labelStyle.TextColor, source: LabelStyle));
+					label.SetBinding(Label.TextColorProperty,
+						BindingHelper.CreateBinding(nameof(ChartLabelStyle.TextColor), getter: static (ChartLabelStyle labelStyle) => labelStyle.TextColor, source: LabelStyle));
 					label.SetBinding(Label.BackgroundProperty,
 						BindingHelper.CreateBinding(nameof(ChartLabelStyle.Background), getter: static (ChartLabelStyle labelStyle) => labelStyle.Background, source: LabelStyle));
-					label.SetBinding(Label.FontAttributesProperty, 
+					label.SetBinding(Label.FontAttributesProperty,
 						BindingHelper.CreateBinding(nameof(ChartLabelStyle.FontAttributes), getter: static (ChartLabelStyle labelStyle) => labelStyle.FontAttributes, source: LabelStyle));
-					label.SetBinding(Label.FontFamilyProperty, 
+					label.SetBinding(Label.FontFamilyProperty,
 						BindingHelper.CreateBinding(nameof(ChartLabelStyle.FontFamily), getter: static (ChartLabelStyle labelStyle) => labelStyle.FontFamily, source: LabelStyle));
 					label.SetBinding(Label.FontSizeProperty,
 						BindingHelper.CreateBinding(nameof(ChartLabelStyle.FontSize), getter: static (ChartLabelStyle labelStyle) => labelStyle.FontSize, source: LabelStyle));
 					label.SetBinding(Label.MarginProperty,
 						BindingHelper.CreateBinding(nameof(ChartLabelStyle.Margin), getter: static (ChartLabelStyle labelStyle) => labelStyle.Margin, source: LabelStyle));
-				return label;
+					return label;
 				});
 
 				BindableLayout.SetItemTemplate(layout, labelTemplate);
@@ -2022,9 +2041,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 #if WINDOWS || MACCATALYST
             return ChartTrackballActivationMode.TouchMove;
 #elif ANDROID || IOS
-			return ChartTrackballActivationMode.LongPress;
+			return ChartTrackballActivationMode.None;
 #else
-            return ChartTrackballActivationMode.TouchMove;
+			return ChartTrackballActivationMode.TouchMove;
 #endif
 		}
 
@@ -2312,7 +2331,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			if (templateToUse.CreateContent() is not View view)
 			{
 				return new Label() { Text = item.ToString() };
-			};
+			}
+			;
 
 			//Set the binding
 			view.BindingContext = item;

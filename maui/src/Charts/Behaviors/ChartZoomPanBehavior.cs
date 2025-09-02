@@ -1063,7 +1063,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 		}
 
-		internal void OnScrollChanged(IChart chart, Point touchPoint, Point translatePoint)
+		internal virtual void OnScrollChanged(IChart chart, Point touchPoint, Point translatePoint)
 		{
 			var clipRect = chart.ActualSeriesClipRect;
 #if MACCATALYST || IOS
