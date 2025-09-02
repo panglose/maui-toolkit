@@ -1249,7 +1249,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		#region Private Methods
 
-		bool TouchHandled(SfCartesianChart cartesian, Point velocity)
+		internal virtual bool TouchHandled(SfCartesianChart cartesian, Point velocity)
 		{
 			var area = cartesian._chartArea;
 			bool isPanEnd = true;
