@@ -53,7 +53,6 @@
 		/// <param name="pointY">The Y-coordinate of the touch point.</param>
 		internal protected override void OnTouchMove(ChartBase chart, float pointX, float pointY)
 		{
-			Hide();
 		}
 
 		/// <summary>
