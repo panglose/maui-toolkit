@@ -1,7 +1,7 @@
 using Microsoft.Maui.Controls.Shapes;
+using Syncfusion.Maui.Toolkit.Helper;
 using Syncfusion.Maui.Toolkit.Internals;
 using Syncfusion.Maui.Toolkit.Themes;
-using Syncfusion.Maui.Toolkit.Helper;
 
 namespace Syncfusion.Maui.Toolkit.BottomSheet
 {
@@ -11,35 +11,35 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 	/// </summary>
 	[ContentProperty(nameof(Content))]
 	public partial class SfBottomSheet : SfView, IParentThemeElement
-    {
+	{
 		#region Fields
 
-    	// Overlay and content
-    	/// <summary>
-    	/// The grid used to create the overlay effect.
-    	/// </summary>
-    	SfGrid? _overlayGrid;
+		// Overlay and content
+		/// <summary>
+		/// The grid used to create the overlay effect.
+		/// </summary>
+		SfGrid? _overlayGrid;
 
-    	/// <summary>
-    	/// The border control representing the main bottom sheet.
-    	/// </summary>
-    	BottomSheetBorder? _bottomSheet;
+		/// <summary>
+		/// The border control representing the main bottom sheet.
+		/// </summary>
+		BottomSheetBorder? _bottomSheet;
 
-    	/// <summary>
-    	/// The grid containing the content of the bottom sheet.
-    	/// </summary>
-    	SfGrid? _bottomSheetContent;
+		/// <summary>
+		/// The grid containing the content of the bottom sheet.
+		/// </summary>
+		SfGrid? _bottomSheetContent;
 
-    	/// <summary>
-    	/// A border control used to add padding to the bottom sheet content.
-    	/// </summary>
-    	SfBorder? _contentBorder;
+		/// <summary>
+		/// A border control used to add padding to the bottom sheet content.
+		/// </summary>
+		SfBorder? _contentBorder;
 
-    	// Grabber
-    	/// <summary>
-    	/// The border control representing the grabber (drag handle) of the bottom sheet.
-    	/// </summary>
-    	SfBorder? _grabber;
+		// Grabber
+		/// <summary>
+		/// The border control representing the grabber (drag handle) of the bottom sheet.
+		/// </summary>
+		SfBorder? _grabber;
 
 		// Grabber
 		/// <summary>
@@ -52,27 +52,27 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		RoundRectangle? _grabberStrokeShape;
 
-    	// Shape
-    	/// <summary>
-    	/// The shape used to provide corner radius for the bottom sheet.
-    	/// </summary>
-    	RoundRectangle? _bottomSheetStrokeShape;
+		// Shape
+		/// <summary>
+		/// The shape used to provide corner radius for the bottom sheet.
+		/// </summary>
+		RoundRectangle? _bottomSheetStrokeShape;
 
-    	// State
-    	/// <summary>
-    	/// Indicates whether the bottom sheet is in a half-expanded state.
-    	/// </summary>
-    	bool _isHalfExpanded = true;
+		// State
+		/// <summary>
+		/// Indicates whether the bottom sheet is in a half-expanded state.
+		/// </summary>
+		bool _isHalfExpanded = true;
 
-    	/// <summary>
-    	/// Indicates whether the bottom sheet is currently open.
-    	/// </summary>
-    	bool _isSheetOpen;
+		/// <summary>
+		/// Indicates whether the bottom sheet is currently open.
+		/// </summary>
+		bool _isSheetOpen;
 
-    	/// <summary>
-    	/// Indicates whether a pointer (touch or mouse) is currently pressed on the bottom sheet.
-    	/// </summary>
-    	bool _isPointerPressed;
+		/// <summary>
+		/// Indicates whether a pointer (touch or mouse) is currently pressed on the bottom sheet.
+		/// </summary>
+		bool _isPointerPressed;
 
 		/// <summary>
 		/// Indicates whether the overlay grid is currently added to the view hierarchy.
@@ -85,54 +85,54 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		double _initialTouchY;
 
-    	/// <summary>
-    	/// The starting Y-coordinate of a swipe gesture on the bottom sheet.
-    	/// </summary>
-    	double _startTouchY;
+		/// <summary>
+		/// The starting Y-coordinate of a swipe gesture on the bottom sheet.
+		/// </summary>
+		double _startTouchY;
 
-    	/// <summary>
-    	/// The ending Y-coordinate of a swipe gesture on the bottom sheet.
-    	/// </summary>
-    	double _endTouchY;
+		/// <summary>
+		/// The ending Y-coordinate of a swipe gesture on the bottom sheet.
+		/// </summary>
+		double _endTouchY;
 
-    	// Event args
-    	/// <summary>
-    	/// Event arguments used to track state changes in the bottom sheet.
-    	/// </summary>
-    	readonly StateChangedEventArgs _stateChangedEventArgs = new StateChangedEventArgs();
+		// Event args
+		/// <summary>
+		/// Event arguments used to track state changes in the bottom sheet.
+		/// </summary>
+		readonly StateChangedEventArgs _stateChangedEventArgs = new StateChangedEventArgs();
 
-    	// Constants
-    	/// <summary>
-    	/// The default opacity value for the overlay.
-    	/// </summary>
-    	const double DefaultOverlayOpacity = 0.5;
+		// Constants
+		/// <summary>
+		/// The default opacity value for the overlay.
+		/// </summary>
+		const double DefaultOverlayOpacity = 0.5;
 
-    	/// <summary>
-    	/// The default height value for the collapsed state of the bottom sheet.
-    	/// </summary>
-    	const double MinimizedHeight = 100;
+		/// <summary>
+		/// The default height value for the collapsed state of the bottom sheet.
+		/// </summary>
+		const double MinimizedHeight = 100;
 
-    	// Grabber constants
-    	/// <summary>
-    	/// The default height of the grabber.
-    	/// </summary>
-    	const double DefaultGrabberHeight = 4;
+		// Grabber constants
+		/// <summary>
+		/// The default height of the grabber.
+		/// </summary>
+		const double DefaultGrabberHeight = 4;
 
-    	/// <summary>
-    	/// The default width of the grabber.
-    	/// </summary>
-    	const double DefaultGrabberWidth = 32;
+		/// <summary>
+		/// The default width of the grabber.
+		/// </summary>
+		const double DefaultGrabberWidth = 32;
 
-    	/// <summary>
-    	/// The default corner radius of the grabber.
-    	/// </summary>
-    	const double DefaultGrabberCornerRadius = 12;
+		/// <summary>
+		/// The default corner radius of the grabber.
+		/// </summary>
+		const double DefaultGrabberCornerRadius = 12;
 
 		// Ratio constants
-    	/// <summary>
-    	/// The default height of the row containing the grabber.
-    	/// </summary>
-    	const double DefaultGrabberAreaHeight = 30;
+		/// <summary>
+		/// The default height of the row containing the grabber.
+		/// </summary>
+		const double DefaultGrabberAreaHeight = 30;
 
 		/// <summary>
 		/// The minimum allowed value for the HalfExpandedRatio property.
@@ -204,12 +204,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="BottomSheetContent"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty BottomSheetContentProperty = BindableProperty.Create(
-		    nameof(BottomSheetContent),
-		    typeof(View),
-		    typeof(SfBottomSheet),
-		    null,
-		    BindingMode.Default,
-		    propertyChanged: OnContentPropertyChanged);
+			nameof(BottomSheetContent),
+			typeof(View),
+			typeof(SfBottomSheet),
+			null,
+			BindingMode.Default,
+			propertyChanged: OnContentPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="State"/> bindable property.
@@ -218,12 +218,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="State"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty StateProperty = BindableProperty.Create(
-		    nameof(State),
-		    typeof(BottomSheetState),
-		    typeof(SfBottomSheet),
-		    BottomSheetState.Hidden,
-		    BindingMode.Default,
-		    propertyChanged: OnStatePropertyChanged);
+			nameof(State),
+			typeof(BottomSheetState),
+			typeof(SfBottomSheet),
+			BottomSheetState.Hidden,
+			BindingMode.Default,
+			propertyChanged: OnStatePropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="HalfExpandedRatio"/> bindable property.
@@ -232,12 +232,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="HalfExpandedRatio"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty HalfExpandedRatioProperty = BindableProperty.Create(
-		    nameof(HalfExpandedRatio),
-		    typeof(double),
-		    typeof(SfBottomSheet),
+			nameof(HalfExpandedRatio),
+			typeof(double),
+			typeof(SfBottomSheet),
 			DefaultHalfExpandedRatio,
-		    BindingMode.Default,
-		    propertyChanged: OnHalfExpandedRatioPropertyChanged);
+			BindingMode.Default,
+			propertyChanged: OnHalfExpandedRatioPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="FullExpandedRatio"/> bindable property.
@@ -302,12 +302,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="AllowedState"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty AllowedStateProperty = BindableProperty.Create(
-		    nameof(AllowedState),
-		    typeof(BottomSheetAllowedState),
-		    typeof(SfBottomSheet),
-		    BottomSheetAllowedState.All,
-		    BindingMode.Default,
-		    propertyChanged: OnAllowedStatePropertyChanged);
+			nameof(AllowedState),
+			typeof(BottomSheetAllowedState),
+			typeof(SfBottomSheet),
+			BottomSheetAllowedState.All,
+			BindingMode.Default,
+			propertyChanged: OnAllowedStatePropertyChanged);
 
 		// Appearance
 		/// <summary>
@@ -317,13 +317,13 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="IsModal"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty IsModalProperty = BindableProperty.Create(
-		    nameof(IsModal),
-		    typeof(bool),
-		    typeof(SfBottomSheet),
-		    true,
-		    BindingMode.Default,
-		    propertyChanged: OnIsModalPropertyChanged);
-		
+			nameof(IsModal),
+			typeof(bool),
+			typeof(SfBottomSheet),
+			true,
+			BindingMode.Default,
+			propertyChanged: OnIsModalPropertyChanged);
+
 		/// <summary>
 		/// Identifies the <see cref="ShowGrabber"/> bindable property.
 		/// </summary>
@@ -331,12 +331,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="ShowGrabber"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty ShowGrabberProperty = BindableProperty.Create(
-		    nameof(ShowGrabber),
-		    typeof(bool),
-		    typeof(SfBottomSheet),
-		    true,
-		    BindingMode.Default,
-		    propertyChanged: OnShowGrabberPropertyChanged);
+			nameof(ShowGrabber),
+			typeof(bool),
+			typeof(SfBottomSheet),
+			true,
+			BindingMode.Default,
+			propertyChanged: OnShowGrabberPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="IsOpen"/> bindable property.
@@ -360,12 +360,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="GrabberBackground"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty GrabberBackgroundProperty = BindableProperty.Create(
-		    nameof(GrabberBackground), 
-		    typeof(Brush), 
-		    typeof(SfBottomSheet), 
-		    new SolidColorBrush(Color.FromArgb("#CAC4D0")), 
-		    BindingMode.Default,
-		    propertyChanged: OnGrabberBackgroundPropertyChanged);
+			nameof(GrabberBackground),
+			typeof(Brush),
+			typeof(SfBottomSheet),
+			new SolidColorBrush(Color.FromArgb("#CAC4D0")),
+			BindingMode.Default,
+			propertyChanged: OnGrabberBackgroundPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="Background"/> bindable property.
@@ -374,12 +374,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="Background"/> bindable property.
 		/// </value>
 		public static readonly new BindableProperty BackgroundProperty = BindableProperty.Create(
-		    nameof(Background), 
-		    typeof(Brush), 
-		    typeof(SfBottomSheet), 
-		    new SolidColorBrush(Color.FromArgb("#F7F2FB")), 
-		    BindingMode.Default,
-		    propertyChanged: OnBackgroundPropertyChanged);
+			nameof(Background),
+			typeof(Brush),
+			typeof(SfBottomSheet),
+			new SolidColorBrush(Color.FromArgb("#F7F2FB")),
+			BindingMode.Default,
+			propertyChanged: OnBackgroundPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="CornerRadius"/> bindable property.
@@ -388,12 +388,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="CornerRadius"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
-		    nameof(CornerRadius), 
-		    typeof(CornerRadius), 
-		    typeof(SfBottomSheet), 
-		    new CornerRadius(0), 
-		    BindingMode.Default,
-		    propertyChanged: OnCornerRadiusPropertyChanged);
+			nameof(CornerRadius),
+			typeof(CornerRadius),
+			typeof(SfBottomSheet),
+			new CornerRadius(0),
+			BindingMode.Default,
+			propertyChanged: OnCornerRadiusPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="ContentPadding"/> bindable property.
@@ -402,12 +402,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="ContentPadding"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty ContentPaddingProperty = BindableProperty.Create(
-		    nameof(ContentPadding), 
-		    typeof(Thickness), 
-		    typeof(SfBottomSheet), 
-		    new Thickness(5), 
-		    BindingMode.Default,
-		    propertyChanged: OnContentPaddingPropertyChanged);
+			nameof(ContentPadding),
+			typeof(Thickness),
+			typeof(SfBottomSheet),
+			new Thickness(5),
+			BindingMode.Default,
+			propertyChanged: OnContentPaddingPropertyChanged);
 
 		// Behavior
 		/// <summary>
@@ -417,11 +417,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="EnableSwiping"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty EnableSwipingProperty = BindableProperty.Create(
-		    nameof(EnableSwiping), 
-		    typeof(bool), 
-		    typeof(SfBottomSheet), 
-		    true,
-		    BindingMode.Default);
+			nameof(EnableSwiping),
+			typeof(bool),
+			typeof(SfBottomSheet),
+			true,
+			BindingMode.Default);
 
 		// Grabber customization
 		/// <summary>
@@ -431,12 +431,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="GrabberHeight"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty GrabberHeightProperty = BindableProperty.Create(
-		    nameof(GrabberHeight), 
-		    typeof(double), 
-		    typeof(SfBottomSheet), 
-		    DefaultGrabberHeight, 
-		    BindingMode.Default, 
-		    propertyChanged: OnGrabberHeightPropertyChanged);
+			nameof(GrabberHeight),
+			typeof(double),
+			typeof(SfBottomSheet),
+			DefaultGrabberHeight,
+			BindingMode.Default,
+			propertyChanged: OnGrabberHeightPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="GrabberWidth"/> bindable property.
@@ -445,12 +445,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="GrabberWidth"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty GrabberWidthProperty = BindableProperty.Create(
-		    nameof(GrabberWidth), 
-		    typeof(double), 
-		    typeof(SfBottomSheet), 
-		    DefaultGrabberWidth, 
-		    BindingMode.Default, 
-		    propertyChanged: OnGrabberWidthPropertyChanged);
+			nameof(GrabberWidth),
+			typeof(double),
+			typeof(SfBottomSheet),
+			DefaultGrabberWidth,
+			BindingMode.Default,
+			propertyChanged: OnGrabberWidthPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="GrabberCornerRadius"/> bindable property.
@@ -459,12 +459,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The identifier for <see cref="GrabberCornerRadius"/> bindable property.
 		/// </value>
 		public static readonly BindableProperty GrabberCornerRadiusProperty = BindableProperty.Create(
-		    nameof(GrabberCornerRadius), 
-		    typeof(CornerRadius), 
-		    typeof(SfBottomSheet), 
-		    new CornerRadius(DefaultGrabberCornerRadius), 
-		    BindingMode.Default, 
-		    propertyChanged: OnGrabberCornerRadiusPropertyChanged);
+			nameof(GrabberCornerRadius),
+			typeof(CornerRadius),
+			typeof(SfBottomSheet),
+			new CornerRadius(DefaultGrabberCornerRadius),
+			BindingMode.Default,
+			propertyChanged: OnGrabberCornerRadiusPropertyChanged);
 
 		/// <summary>
 		/// Identifies the <see cref="GrabberAreaHeight"/> bindable property.
@@ -519,11 +519,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// The default value is a semi-transparent black color (#80000000).
 		/// </remarks>
 		internal static readonly BindableProperty OverlayBackgroundColorProperty = BindableProperty.Create(
-			nameof(OverlayBackgroundColor), 
-			typeof(Color), 
-			typeof(SfBottomSheet), 
-			Color.FromArgb("#80000000"), 
-			BindingMode.Default, 
+			nameof(OverlayBackgroundColor),
+			typeof(Color),
+			typeof(SfBottomSheet),
+			Color.FromArgb("#80000000"),
+			BindingMode.Default,
 			propertyChanged: OnOverlayBackgroundColorChanged);
 
 		#endregion
@@ -534,15 +534,15 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// Initializes a new instance of the <see cref="SfBottomSheet"/> class.
 		/// </summary>
 		public SfBottomSheet()
-        {
-            ThemeElement.InitializeThemeResources(this, "SfBottomSheetTheme");
+		{
+			ThemeElement.InitializeThemeResources(this, "SfBottomSheetTheme");
 #if IOS
 			this.IgnoreSafeArea = true;
 #endif
 
 			InitializeLayout();
 			ApplyThemeResources();
-        }
+		}
 
 		#endregion
 
@@ -568,8 +568,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </value>
 		public View BottomSheetContent
 		{
-		    get => (View)GetValue(BottomSheetContentProperty);
-		    set => SetValue(BottomSheetContentProperty, value);
+			get => (View)GetValue(BottomSheetContentProperty);
+			set => SetValue(BottomSheetContentProperty, value);
 		}
 
 		/// <summary>
@@ -602,8 +602,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public BottomSheetState State
 		{
-		    get => (BottomSheetState)GetValue(StateProperty);
-		    set => SetValue(StateProperty, value);
+			get => (BottomSheetState)GetValue(StateProperty);
+			set => SetValue(StateProperty, value);
 		}
 
 		/// <summary>
@@ -635,8 +635,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public double HalfExpandedRatio
 		{
-		    get => (double)GetValue(HalfExpandedRatioProperty);
-		    set => SetValue(HalfExpandedRatioProperty, value);
+			get => (double)GetValue(HalfExpandedRatioProperty);
+			set => SetValue(HalfExpandedRatioProperty, value);
 		}
 
 		/// <summary>
@@ -792,8 +792,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public BottomSheetAllowedState AllowedState
 		{
-		    get => (BottomSheetAllowedState)GetValue(AllowedStateProperty);
-		    set => SetValue(AllowedStateProperty, value);
+			get => (BottomSheetAllowedState)GetValue(AllowedStateProperty);
+			set => SetValue(AllowedStateProperty, value);
 		}
 
 		/// <summary>
@@ -824,8 +824,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public bool IsModal
 		{
-		    get => (bool)GetValue(IsModalProperty);
-		    set => SetValue(IsModalProperty, value);
+			get => (bool)GetValue(IsModalProperty);
+			set => SetValue(IsModalProperty, value);
 		}
 
 		/// <summary>
@@ -853,8 +853,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public bool ShowGrabber
 		{
-		    get => (bool)GetValue(ShowGrabberProperty);
-		    set => SetValue(ShowGrabberProperty, value);
+			get => (bool)GetValue(ShowGrabberProperty);
+			set => SetValue(ShowGrabberProperty, value);
 		}
 
 		/// <summary>
@@ -917,8 +917,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public new Brush Background
 		{
-		    get => (Brush)GetValue(BackgroundProperty);
-		    set => SetValue(BackgroundProperty, value);
+			get => (Brush)GetValue(BackgroundProperty);
+			set => SetValue(BackgroundProperty, value);
 		}
 
 		/// <summary>
@@ -950,8 +950,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public CornerRadius CornerRadius
 		{
-		    get => (CornerRadius)GetValue(CornerRadiusProperty);
-		    set => SetValue(CornerRadiusProperty, value);
+			get => (CornerRadius)GetValue(CornerRadiusProperty);
+			set => SetValue(CornerRadiusProperty, value);
 		}
 
 		/// <summary>
@@ -982,8 +982,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public Thickness ContentPadding
 		{
-		    get => (Thickness)GetValue(ContentPaddingProperty);
-		    set => SetValue(ContentPaddingProperty, value);
+			get => (Thickness)GetValue(ContentPaddingProperty);
+			set => SetValue(ContentPaddingProperty, value);
 		}
 
 		/// <summary>
@@ -1011,8 +1011,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public Brush GrabberBackground
 		{
-		    get => (Brush)GetValue(GrabberBackgroundProperty);
-		    set => SetValue(GrabberBackgroundProperty, value);
+			get => (Brush)GetValue(GrabberBackgroundProperty);
+			set => SetValue(GrabberBackgroundProperty, value);
 		}
 
 		/// <summary>
@@ -1044,8 +1044,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public bool EnableSwiping
 		{
-		    get => (bool)GetValue(EnableSwipingProperty);
-		    set => SetValue(EnableSwipingProperty, value);
+			get => (bool)GetValue(EnableSwipingProperty);
+			set => SetValue(EnableSwipingProperty, value);
 		}
 
 		/// <summary>
@@ -1076,8 +1076,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public double GrabberHeight
 		{
-		    get => (double)GetValue(GrabberHeightProperty);
-		    set => SetValue(GrabberHeightProperty, value);
+			get => (double)GetValue(GrabberHeightProperty);
+			set => SetValue(GrabberHeightProperty, value);
 		}
 
 		/// <summary>
@@ -1108,8 +1108,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public double GrabberWidth
 		{
-		    get => (double)GetValue(GrabberWidthProperty);
-		    set => SetValue(GrabberWidthProperty, value);
+			get => (double)GetValue(GrabberWidthProperty);
+			set => SetValue(GrabberWidthProperty, value);
 		}
 
 		/// <summary>
@@ -1140,8 +1140,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </example>
 		public CornerRadius GrabberCornerRadius
 		{
-		    get => (CornerRadius)GetValue(GrabberCornerRadiusProperty);
-		    set => SetValue(GrabberCornerRadiusProperty, value);
+			get => (CornerRadius)GetValue(GrabberCornerRadiusProperty);
+			set => SetValue(GrabberCornerRadiusProperty, value);
 		}
 
 		/// <summary>
@@ -1231,8 +1231,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </value>
 		internal Color OverlayBackgroundColor
 		{
-		    get => (Color)GetValue(OverlayBackgroundColorProperty);
-		    set => SetValue(OverlayBackgroundColorProperty, value);
+			get => (Color)GetValue(OverlayBackgroundColorProperty);
+			set => SetValue(OverlayBackgroundColorProperty, value);
 		}
 
 		#endregion
@@ -1253,11 +1253,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 			}
 
 			_bottomSheet.IsVisible = true;
-		    if (!IsValidHeight())
-		    {
-		        RegisterSizeChangedEvent();
-		        return;
-		    }
+			if (!IsValidHeight())
+			{
+				RegisterSizeChangedEvent();
+				return;
+			}
 
 			SetupBottomSheetForShow();
 			AnimateBottomSheet(GetTargetPosition());
@@ -1272,23 +1272,23 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </exception>
 		public void Close()
 		{
-		    if(_bottomSheet is null)
+			if (_bottomSheet is null)
 			{
 				return;
 			}
 
-		    AnimateBottomSheet(Height, onFinish: () =>
-		    {
-		        _bottomSheet.IsVisible = false;
+			AnimateBottomSheet(Height, onFinish: () =>
+			{
+				_bottomSheet.IsVisible = false;
 				RemoveOverlayFromView();
 			});
 
 			if (_isSheetOpen)
-		    {
-		        _isSheetOpen = false;
+			{
+				_isSheetOpen = false;
 				IsOpen = false;
 				State = BottomSheetState.Hidden;
-		    }
+			}
 		}
 
 		/// <summary>
@@ -1312,7 +1312,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="args">The state changed event arguments.</param>
 		internal virtual void OnStateChanged(StateChangedEventArgs args)
 		{
-		    StateChanged?.Invoke(this, args);
+			StateChanged?.Invoke(this, args);
 		}
 
 		/// <summary>
@@ -1322,30 +1322,34 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="point">The touch point.</param>
 		internal void OnHandleTouch(PointerActions action, Point point)
 		{
-		    if (!EnableSwiping || !_isSheetOpen || _bottomSheet is null)
-		    {
-		        return;
-		    }
+			if (!EnableSwiping || !_isSheetOpen || _bottomSheet is null)
+			{
+				return;
+			}
 
-		    double touchY = GetPlatformAdjustedTouchY(point);
+			double touchY = GetPlatformAdjustedTouchY(point);
 
-		    switch (action)
-		    {
-		        case PointerActions.Pressed:
-		            HandleTouchPressed(touchY);
-		            return;
-		        case PointerActions.Moved:
-		            HandleTouchMoved(touchY);
-		            return;
-		        case PointerActions.Released:
-		            HandleTouchReleased(touchY);
-		            return;
-		        default:
-		            // Log or handle unexpected action
-		            return;
-		    }
+			if (OnPreHandleTouch(action, point.X, touchY) == true)
+				return;
+
+			switch (action)
+			{
+				case PointerActions.Pressed:
+					HandleTouchPressed(touchY);
+					return;
+				case PointerActions.Moved:
+					HandleTouchMoved(touchY);
+					return;
+				case PointerActions.Released:
+					HandleTouchReleased(touchY);
+					return;
+				default:
+					// Log or handle unexpected action
+					return;
+			}
 		}
 
+		protected virtual bool OnPreHandleTouch(PointerActions action, double x, double y) => false;
 		#endregion
 
 		#region Private Methods
@@ -1355,14 +1359,14 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void InitializeLayout()
 		{
-		    InitializeOverlayGrid();
-		    InitializeGrabber();
-		    InitializeBottomSheetContent();
-		    InitializeBottomSheetBorder();
-		    InitializeContentBorder();
+			InitializeOverlayGrid();
+			InitializeGrabber();
+			InitializeBottomSheetContent();
+			InitializeBottomSheetBorder();
+			InitializeContentBorder();
 
-		    if (_bottomSheet is not null)
-		    {
+			if (_bottomSheet is not null)
+			{
 				Children.Add(_bottomSheet);
 				_bottomSheet.IsVisible = false;
 			}
@@ -1404,16 +1408,16 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void InitializeOverlayGrid()
 		{
-		    _overlayGrid = new SfGrid()
-		    {
-		        BackgroundColor = OverlayBackgroundColor,
-		        Opacity = DefaultOverlayOpacity,
-		        IsVisible = true
-		    };
+			_overlayGrid = new SfGrid()
+			{
+				BackgroundColor = OverlayBackgroundColor,
+				Opacity = DefaultOverlayOpacity,
+				IsVisible = true
+			};
 
-		    var tapGestureRecognizer = new TapGestureRecognizer();
-    		tapGestureRecognizer.Tapped += OnOverlayGridTapped;
-    		_overlayGrid.GestureRecognizers.Add(tapGestureRecognizer);
+			var tapGestureRecognizer = new TapGestureRecognizer();
+			tapGestureRecognizer.Tapped += OnOverlayGridTapped;
+			_overlayGrid.GestureRecognizers.Add(tapGestureRecognizer);
 		}
 
 		/// <summary>
@@ -1421,18 +1425,18 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void InitializeGrabber()
 		{
-		    _grabberStrokeShape = new RoundRectangle() { CornerRadius = DefaultGrabberCornerRadius };
+			_grabberStrokeShape = new RoundRectangle() { CornerRadius = DefaultGrabberCornerRadius };
 
-		    _grabber = new SfBorder()
-		    {
-		        Background = GrabberBackground,
-		        Stroke = Colors.Transparent,
-		        HeightRequest = DefaultGrabberHeight,
-		        WidthRequest = DefaultGrabberWidth,
-		        HorizontalOptions = LayoutOptions.Center,
-		        VerticalOptions = LayoutOptions.Center,
-		        StrokeShape = _grabberStrokeShape
-		    };
+			_grabber = new SfBorder()
+			{
+				Background = GrabberBackground,
+				Stroke = Colors.Transparent,
+				HeightRequest = DefaultGrabberHeight,
+				WidthRequest = DefaultGrabberWidth,
+				HorizontalOptions = LayoutOptions.Center,
+				VerticalOptions = LayoutOptions.Center,
+				StrokeShape = _grabberStrokeShape
+			};
 		}
 
 		/// <summary>
@@ -1440,15 +1444,15 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void InitializeBottomSheetContent()
 		{
-		    _bottomSheetContent = new SfGrid()
-		    {
-		        Background = Background,
-		        RowDefinitions = new RowDefinitionCollection
-		        {
-		            new RowDefinition { Height = new GridLength((GrabberAreaHeight>=0) ? GrabberAreaHeight : DefaultGrabberAreaHeight) },
-		            new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }
-		        }
-		    };
+			_bottomSheetContent = new SfGrid()
+			{
+				Background = Background,
+				RowDefinitions = new RowDefinitionCollection
+				{
+					new RowDefinition { Height = new GridLength((GrabberAreaHeight>=0) ? GrabberAreaHeight : DefaultGrabberAreaHeight) },
+					new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }
+				}
+			};
 
 #if IOS
 			_bottomSheetContent.IgnoreSafeArea = true;
@@ -1459,13 +1463,13 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				IsClippedToBounds = true
 			};
 
-		    // Add grabber grid to the first row if it has been initialized
-   			if (_grabber is not null)
-    		{
+			// Add grabber grid to the first row if it has been initialized
+			if (_grabber is not null)
+			{
 				_grabberGrid.Children.Add(_grabber);
-        		_bottomSheetContent.Children.Add(_grabberGrid);
-        		SfGrid.SetRow(_grabberGrid, 0);
-    		}
+				_bottomSheetContent.Children.Add(_grabberGrid);
+				SfGrid.SetRow(_grabberGrid, 0);
+			}
 		}
 
 		/// <summary>
@@ -1473,20 +1477,20 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void InitializeBottomSheetBorder()
 		{
-		    _bottomSheetStrokeShape = new RoundRectangle() { CornerRadius = CornerRadius };
+			_bottomSheetStrokeShape = new RoundRectangle() { CornerRadius = CornerRadius };
 
-		    _bottomSheet = new BottomSheetBorder(this)
-		    {
-		        Background = Background,
-		        StrokeThickness = 0,
-		        VerticalOptions = LayoutOptions.Start,
+			_bottomSheet = new BottomSheetBorder(this)
+			{
+				Background = Background,
+				StrokeThickness = 0,
+				VerticalOptions = LayoutOptions.Start,
 				HorizontalOptions = LayoutOptions.Fill,
-		        HeightRequest = CalculateInitialHeight(),
+				HeightRequest = CalculateInitialHeight(),
 				IsVisible = false,
-		        StrokeShape = _bottomSheetStrokeShape,
-		        Content = _bottomSheetContent ?? throw new InvalidOperationException("Bottom sheet content is not initialized."),
+				StrokeShape = _bottomSheetStrokeShape,
+				Content = _bottomSheetContent ?? throw new InvalidOperationException("Bottom sheet content is not initialized."),
 				Padding = ContentPadding
-		    };
+			};
 		}
 
 		/// <summary>
@@ -1533,10 +1537,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void InitializeContentBorder()
 		{
-		    _contentBorder = new SfBorder()
-		    {
-		        StrokeThickness = 0
-		    };
+			_contentBorder = new SfBorder()
+			{
+				StrokeThickness = 0
+			};
 		}
 
 		/// <summary>
@@ -1544,7 +1548,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void ApplyThemeResources()
 		{
-		   SetDynamicResource(OverlayBackgroundColorProperty, "SfBottomSheetOverlayBackgroundColor");
+			SetDynamicResource(OverlayBackgroundColorProperty, "SfBottomSheetOverlayBackgroundColor");
 		}
 
 		/// <summary>
@@ -1553,12 +1557,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new value for HalfExpandedRatio.</param>
 		void UpdateHalfExpandedRatioProperty(double newValue)
 		{
-		    double clampedValue = Math.Clamp(newValue, MinHalfExpandedRatio, MaxHalfExpandedRatio);
-		    HalfExpandedRatio = clampedValue;
-		    if (State is BottomSheetState.HalfExpanded)
-		    {
-		        OnSizeAllocated(Width, Height);
-		    }
+			double clampedValue = Math.Clamp(newValue, MinHalfExpandedRatio, MaxHalfExpandedRatio);
+			HalfExpandedRatio = clampedValue;
+			if (State is BottomSheetState.HalfExpanded)
+			{
+				OnSizeAllocated(Width, Height);
+			}
 		}
 
 		/// <summary>
@@ -1581,7 +1585,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new value for CollapsedHeight.</param>
 		void UpdateCollapsedHeightProperty(double newValue)
 		{
-			if(CollapsedHeight<=0)
+			if (CollapsedHeight <= 0)
 			{
 				return;
 			}
@@ -1603,7 +1607,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				return;
 			}
 
-			if(_bottomSheet is not null)
+			if (_bottomSheet is not null)
 			{
 				_bottomSheet.WidthRequest = newValue;
 			}
@@ -1639,26 +1643,26 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </exception>
 		void SetBottomSheetContent(View? content)
 		{
-		    if (content is null || _bottomSheetContent is null)
-		    {
+			if (content is null || _bottomSheetContent is null)
+			{
 				return;
-		    }
+			}
 
-		    // Remove existing content if any
-		    if (_bottomSheetContent.Children.Count > 1)
-		    {
-		        _bottomSheetContent.Children.RemoveAt(1);
-		    }
+			// Remove existing content if any
+			if (_bottomSheetContent.Children.Count > 1)
+			{
+				_bottomSheetContent.Children.RemoveAt(1);
+			}
 
-		    // Set new content
-		    if (_contentBorder is not null)
-		    {
-		        _contentBorder.Content = content;
-		    }
+			// Set new content
+			if (_contentBorder is not null)
+			{
+				_contentBorder.Content = content;
+			}
 
-		    // Add content border to bottom sheet
-		    _bottomSheetContent.Children.Add(_contentBorder);
-		    SfGrid.SetRow(_contentBorder, 1);
+			// Add content border to bottom sheet
+			_bottomSheetContent.Children.Add(_contentBorder);
+			SfGrid.SetRow(_contentBorder, 1);
 		}
 
 
@@ -1667,12 +1671,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void UpdateRowHeight()
 		{
-		    const int GrabberRowIndex = 0;
+			const int GrabberRowIndex = 0;
 
-		    if (_bottomSheetContent is not null)
-		    {
-		        _bottomSheetContent.RowDefinitions[GrabberRowIndex].Height = 
-		            ShowGrabber ? new GridLength(GrabberAreaHeight) : new GridLength(0);
+			if (_bottomSheetContent is not null)
+			{
+				_bottomSheetContent.RowDefinitions[GrabberRowIndex].Height =
+					ShowGrabber ? new GridLength(GrabberAreaHeight) : new GridLength(0);
 #if ANDROID || IOS || MACCATALYST
 				if(_grabber is not null && ShowGrabber)
 				{
@@ -1691,9 +1695,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="e">The event arguments.</param>
 		void OnOverlayGridTapped(object? sender, EventArgs e)
 		{
-		    if (_isSheetOpen)
-		    {
-		        if(CollapseOnOverlayTap)
+			if (_isSheetOpen)
+			{
+				if (CollapseOnOverlayTap)
 				{
 					State = BottomSheetState.Collapsed;
 				}
@@ -1701,7 +1705,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				{
 					Close();
 				}
-		    }
+			}
 		}
 
 		/// <summary>
@@ -1709,20 +1713,20 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void UpdateState()
 		{
-		    var (newState, newIsHalfExpanded) = AllowedState switch
-		    {
-		        BottomSheetAllowedState.HalfExpanded => (_isSheetOpen ? BottomSheetState.HalfExpanded : State, true),
-		        BottomSheetAllowedState.FullExpanded => (_isSheetOpen ? BottomSheetState.FullExpanded : State, false),
-		        BottomSheetAllowedState.All => (State, _isHalfExpanded),
-		        _ => (!_isSheetOpen ? BottomSheetState.Hidden : State, true)
-		    };
+			var (newState, newIsHalfExpanded) = AllowedState switch
+			{
+				BottomSheetAllowedState.HalfExpanded => (_isSheetOpen ? BottomSheetState.HalfExpanded : State, true),
+				BottomSheetAllowedState.FullExpanded => (_isSheetOpen ? BottomSheetState.FullExpanded : State, false),
+				BottomSheetAllowedState.All => (State, _isHalfExpanded),
+				_ => (!_isSheetOpen ? BottomSheetState.Hidden : State, true)
+			};
 
-		    if (!newState.Equals(State))
-		    {
-		        SetValue(StateProperty, newState);
-		    }
+			if (!newState.Equals(State))
+			{
+				SetValue(StateProperty, newState);
+			}
 
-		    _isHalfExpanded = newIsHalfExpanded;
+			_isHalfExpanded = newIsHalfExpanded;
 		}
 
 		/// <summary>
@@ -1731,14 +1735,14 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="brush">The brush to be set as the background. If null, the default background is used.</param>
 		void UpdateBottomSheetBackground(Brush brush)
 		{
-		    if (_bottomSheet is null || _bottomSheetContent is null)
-		    {
-		        return;
-		    }
+			if (_bottomSheet is null || _bottomSheetContent is null)
+			{
+				return;
+			}
 
-		    var background = brush ?? (Brush)SfBottomSheet.BackgroundProperty.DefaultValue;
-		    _bottomSheet.Background = background;
-		    _bottomSheetContent.Background = background;
+			var background = brush ?? (Brush)SfBottomSheet.BackgroundProperty.DefaultValue;
+			_bottomSheet.Background = background;
+			_bottomSheetContent.Background = background;
 		}
 
 
@@ -1748,12 +1752,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="brush">The brush to be set as the grabber's background. If null, the default background is used.</param>
 		void UpdateGrabberBackground(Brush brush)
 		{
-		    if (_grabber is null)
-		    {
-		        return;
-		    }
+			if (_grabber is null)
+			{
+				return;
+			}
 
-		    _grabber.Background = brush ?? (Brush)SfBottomSheet.GrabberBackgroundProperty.DefaultValue;
+			_grabber.Background = brush ?? (Brush)SfBottomSheet.GrabberBackgroundProperty.DefaultValue;
 		}
 
 
@@ -1763,19 +1767,19 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="cornerRadius">The new corner radius to be applied.</param>
 		void UpdateCornerRadius(CornerRadius cornerRadius)
 		{
-		    if (_bottomSheet?.StrokeShape is null || _bottomSheetStrokeShape is null)
-		    {
-		        return;
-		    }
+			if (_bottomSheet?.StrokeShape is null || _bottomSheetStrokeShape is null)
+			{
+				return;
+			}
 
-		    cornerRadius = EnsureValidCornerRadius(cornerRadius);
+			cornerRadius = EnsureValidCornerRadius(cornerRadius);
 
-		    if (!_bottomSheetStrokeShape.CornerRadius.Equals(cornerRadius))
-		    {
-		        _bottomSheetStrokeShape.CornerRadius = cornerRadius;
-		        _bottomSheet.StrokeShape = _bottomSheetStrokeShape;
-		        OnPropertyChanged(nameof(CornerRadius));
-		    }
+			if (!_bottomSheetStrokeShape.CornerRadius.Equals(cornerRadius))
+			{
+				_bottomSheetStrokeShape.CornerRadius = cornerRadius;
+				_bottomSheet.StrokeShape = _bottomSheetStrokeShape;
+				OnPropertyChanged(nameof(CornerRadius));
+			}
 		}
 
 		/// <summary>
@@ -1785,9 +1789,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>A valid corner radius. If the input was invalid, returns the default value.</returns>
 		CornerRadius EnsureValidCornerRadius(CornerRadius cornerRadius)
 		{
-		    return (cornerRadius.TopLeft < 0 || cornerRadius.TopRight < 0 || cornerRadius.BottomLeft < 0 || cornerRadius.BottomRight < 0)
-		        ? (CornerRadius)SfBottomSheet.CornerRadiusProperty.DefaultValue
-		        : cornerRadius;
+			return (cornerRadius.TopLeft < 0 || cornerRadius.TopRight < 0 || cornerRadius.BottomLeft < 0 || cornerRadius.BottomRight < 0)
+				? (CornerRadius)SfBottomSheet.CornerRadiusProperty.DefaultValue
+				: cornerRadius;
 		}
 
 
@@ -1797,11 +1801,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="padding">The new padding to be applied.</param>
 		void UpdatePadding(Thickness padding)
 		{
-		    if (_bottomSheet is not null && !_bottomSheet.Padding.Equals(padding))
-		    {
-		        _bottomSheet.Padding = new Thickness(Math.Max(0, padding.Left), Math.Max(0, padding.Top), Math.Max(0, padding.Right), Math.Max(0, padding.Bottom));
-		        OnPropertyChanged(nameof(ContentPadding));
-		    }
+			if (_bottomSheet is not null && !_bottomSheet.Padding.Equals(padding))
+			{
+				_bottomSheet.Padding = new Thickness(Math.Max(0, padding.Left), Math.Max(0, padding.Top), Math.Max(0, padding.Right), Math.Max(0, padding.Bottom));
+				OnPropertyChanged(nameof(ContentPadding));
+			}
 		}
 
 		/// <summary>
@@ -1810,12 +1814,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new height to be set for the grabber.</param>
 		void UpdateGrabberHeightProperty(double newValue)
 		{
-		    if (_grabber is null)
-		    {
-		        return;
-		    }
+			if (_grabber is null)
+			{
+				return;
+			}
 
-		    _grabber.HeightRequest = (newValue<=0) ? (double)(GrabberHeightProperty.DefaultValue) : newValue; 
+			_grabber.HeightRequest = (newValue <= 0) ? (double)(GrabberHeightProperty.DefaultValue) : newValue;
 		}
 
 		/// <summary>
@@ -1824,12 +1828,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new width to be set for the grabber.</param>
 		void UpdateGrabberWidthProperty(double newValue)
 		{
-		    if (_grabber is null)
-		    {
-		        return;
-		    }
+			if (_grabber is null)
+			{
+				return;
+			}
 
-		    _grabber.WidthRequest = (newValue<=0) ? (double)GrabberWidthProperty.DefaultValue : newValue;
+			_grabber.WidthRequest = (newValue <= 0) ? (double)GrabberWidthProperty.DefaultValue : newValue;
 		}
 
 
@@ -1839,19 +1843,19 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="cornerRadius">The new corner radius to be applied to the grabber.</param>
 		void UpdateGrabberCornerRadius(CornerRadius cornerRadius)
 		{
-		    if (_grabber?.StrokeShape is null || _grabberStrokeShape is null)
-		    {
-		        return;
-		    }
+			if (_grabber?.StrokeShape is null || _grabberStrokeShape is null)
+			{
+				return;
+			}
 
-		    cornerRadius = EnsureValidCornerRadius(cornerRadius, SfBottomSheet.GrabberCornerRadiusProperty.DefaultValue);
+			cornerRadius = EnsureValidCornerRadius(cornerRadius, SfBottomSheet.GrabberCornerRadiusProperty.DefaultValue);
 
-		    if (!_grabberStrokeShape.CornerRadius.Equals(cornerRadius))
-		    {
-		        _grabberStrokeShape.CornerRadius = cornerRadius;
-		        _grabber.StrokeShape = _grabberStrokeShape;
-		        OnPropertyChanged(nameof(GrabberCornerRadius));
-		    }
+			if (!_grabberStrokeShape.CornerRadius.Equals(cornerRadius))
+			{
+				_grabberStrokeShape.CornerRadius = cornerRadius;
+				_grabber.StrokeShape = _grabberStrokeShape;
+				OnPropertyChanged(nameof(GrabberCornerRadius));
+			}
 		}
 
 		/// <summary>
@@ -1860,7 +1864,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new height to be set for the grabber area.</param>
 		void UpdateGrabberRowHeightProperty(double newValue)
 		{
-			if (_bottomSheetContent is null || newValue<0)
+			if (_bottomSheetContent is null || newValue < 0)
 			{
 				return;
 			}
@@ -1876,9 +1880,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>A valid corner radius. If the input was invalid, returns the default value.</returns>
 		CornerRadius EnsureValidCornerRadius(CornerRadius cornerRadius, object defaultValue)
 		{
-		    return (cornerRadius.TopLeft < 0 || cornerRadius.TopRight < 0 || cornerRadius.BottomLeft < 0 || cornerRadius.BottomRight < 0)
-		        ? (CornerRadius)defaultValue
-		        : cornerRadius;
+			return (cornerRadius.TopLeft < 0 || cornerRadius.TopRight < 0 || cornerRadius.BottomLeft < 0 || cornerRadius.BottomRight < 0)
+				? (CornerRadius)defaultValue
+				: cornerRadius;
 		}
 
 
@@ -1890,10 +1894,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="e">The event arguments.</param>
 		void OnSizeChanged(object? sender, EventArgs e)
 		{
-		    if (_bottomSheet is not null && _bottomSheet.IsVisible)
-		    {
-		        Show();
-		    }
+			if (_bottomSheet is not null && _bottomSheet.IsVisible)
+			{
+				Show();
+			}
 		}
 
 
@@ -1902,22 +1906,22 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void UpdatePosition()
 		{
-		    const double SwipeThreshold = 100;
-		    const double DoubleSwipeThreshold = SwipeThreshold * 2;
-		    double swipeDistance = _endTouchY - _startTouchY;
+			const double SwipeThreshold = 100;
+			const double DoubleSwipeThreshold = SwipeThreshold * 2;
+			double swipeDistance = _endTouchY - _startTouchY;
 
-		    switch (State)
-		    {
-		        case BottomSheetState.FullExpanded:
-		            HandleFullExpandedState(swipeDistance, SwipeThreshold, DoubleSwipeThreshold);
-		            break;
-		        case BottomSheetState.HalfExpanded:
-		            HandleHalfExpandedState(swipeDistance, SwipeThreshold);
-		            break;
-		        case BottomSheetState.Collapsed:
-		            HandleCollapsedState(swipeDistance, SwipeThreshold);
-		            break;
-		    }
+			switch (State)
+			{
+				case BottomSheetState.FullExpanded:
+					HandleFullExpandedState(swipeDistance, SwipeThreshold, DoubleSwipeThreshold);
+					break;
+				case BottomSheetState.HalfExpanded:
+					HandleHalfExpandedState(swipeDistance, SwipeThreshold);
+					break;
+				case BottomSheetState.Collapsed:
+					HandleCollapsedState(swipeDistance, SwipeThreshold);
+					break;
+			}
 		}
 
 		/// <summary>
@@ -1928,18 +1932,18 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="doubleSwipeThreshold">The threshold required to transition to a collapsed state.</param>
 		void HandleFullExpandedState(double swipeDistance, double swipeThreshold, double doubleSwipeThreshold)
 		{
-		    if (swipeDistance > swipeThreshold && AllowedState is not BottomSheetAllowedState.FullExpanded)
-		    {
+			if (swipeDistance > swipeThreshold && AllowedState is not BottomSheetAllowedState.FullExpanded)
+			{
 				UpdateStateBasedOnNearestPoint();
 			}
-		    else if (swipeDistance > doubleSwipeThreshold)
-		    {
-		        State = BottomSheetState.Collapsed;
-		    }
-		    else
-		    {
-		        Show();
-		    }
+			else if (swipeDistance > doubleSwipeThreshold)
+			{
+				State = BottomSheetState.Collapsed;
+			}
+			else
+			{
+				Show();
+			}
 		}
 
 		/// <summary>
@@ -1949,18 +1953,18 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="swipeThreshold">The threshold required to transition to a different state.</param>
 		void HandleHalfExpandedState(double swipeDistance, double swipeThreshold)
 		{
-		    if (-swipeDistance > swipeThreshold && AllowedState is not BottomSheetAllowedState.HalfExpanded)
-		    {
-		        State = BottomSheetState.FullExpanded;
-		    }
-		    else if (swipeDistance > swipeThreshold)
-		    {
-		        State = BottomSheetState.Collapsed;
-		    }
-		    else
-		    {
-		        Show();
-		    }
+			if (-swipeDistance > swipeThreshold && AllowedState is not BottomSheetAllowedState.HalfExpanded)
+			{
+				State = BottomSheetState.FullExpanded;
+			}
+			else if (swipeDistance > swipeThreshold)
+			{
+				State = BottomSheetState.Collapsed;
+			}
+			else
+			{
+				Show();
+			}
 		}
 
 		/// <summary>
@@ -1970,9 +1974,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="swipeThreshold">The threshold required to transition to a different state.</param>
 		void HandleCollapsedState(double swipeDistance, double swipeThreshold)
 		{
-		    if (-swipeDistance > swipeThreshold)
-		    {
-				if(AllowedState == BottomSheetAllowedState.HalfExpanded)
+			if (-swipeDistance > swipeThreshold)
+			{
+				if (AllowedState == BottomSheetAllowedState.HalfExpanded)
 				{
 					State = BottomSheetState.HalfExpanded;
 				}
@@ -1985,10 +1989,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 					UpdateStateBasedOnNearestPoint();
 				}
 			}
-		    else
-		    {
-		        Show();
-		    }
+			else
+			{
+				Show();
+			}
 		}
 
 		/// <summary>
@@ -2008,7 +2012,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 
 			if (nearestPoint == fullExpandedHeight)
 			{
-				if(State is not BottomSheetState.FullExpanded)
+				if (State is not BottomSheetState.FullExpanded)
 				{
 					State = BottomSheetState.FullExpanded;
 				}
@@ -2042,12 +2046,12 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newState">The new state of the bottom sheet.</param>
 		void UpdateStateChanged(BottomSheetState oldState, BottomSheetState newState)
 		{
-		    if (!oldState.Equals(newState))
-		    {
-		        _stateChangedEventArgs.OldState = oldState;
-		        _stateChangedEventArgs.NewState = newState;
+			if (!oldState.Equals(newState))
+			{
+				_stateChangedEventArgs.OldState = oldState;
+				_stateChangedEventArgs.NewState = newState;
 				OnStateChanged(_stateChangedEventArgs);
-		    }
+			}
 		}
 
 		/// <summary>
@@ -2064,8 +2068,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void RegisterSizeChangedEvent()
 		{
-		    SizeChanged -= OnSizeChanged;
-		    SizeChanged += OnSizeChanged;
+			SizeChanged -= OnSizeChanged;
+			SizeChanged += OnSizeChanged;
 		}
 
 
@@ -2074,14 +2078,14 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void SetupBottomSheetForShow()
 		{
-		    if (_isSheetOpen || _bottomSheet is null)
-		    {
-		        return;
-		    }
+			if (_isSheetOpen || _bottomSheet is null)
+			{
+				return;
+			}
 
-		    // Position the bottom sheet just below the visible area
-		    _bottomSheet.TranslationY = Height;
-		    _bottomSheet.IsVisible = true;
+			// Position the bottom sheet just below the visible area
+			_bottomSheet.TranslationY = Height;
+			_bottomSheet.IsVisible = true;
 
 			// Add overlay to view if modal
 			if (IsModal)
@@ -2097,17 +2101,17 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>The target Y position for the bottom sheet.</returns>
 		double GetTargetPosition()
 		{
-		    if ((State is BottomSheetState.FullExpanded || !_isHalfExpanded) && State is not BottomSheetState.Collapsed && AllowedState is not BottomSheetAllowedState.HalfExpanded)
-		    {
-		        return GetFullExpandedPosition();
-		    }
+			if ((State is BottomSheetState.FullExpanded || !_isHalfExpanded) && State is not BottomSheetState.Collapsed && AllowedState is not BottomSheetAllowedState.HalfExpanded)
+			{
+				return GetFullExpandedPosition();
+			}
 
-		    if (State is BottomSheetState.Collapsed)
-		    {
-		        return GetCollapsedPosition();
-		    }
+			if (State is BottomSheetState.Collapsed)
+			{
+				return GetCollapsedPosition();
+			}
 
-		    return GetHalfExpandedPosition();
+			return GetHalfExpandedPosition();
 		}
 
 		/// <summary>
@@ -2116,10 +2120,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>The calculated position for the fully expanded state. Currently, it always returns 0.</returns>
 		double GetFullExpandedPosition()
 		{
-		    if (State is BottomSheetState.Hidden || State is not BottomSheetState.FullExpanded)
-		    {
-		        State = BottomSheetState.FullExpanded;
-		    }
+			if (State is BottomSheetState.Hidden || State is not BottomSheetState.FullExpanded)
+			{
+				State = BottomSheetState.FullExpanded;
+			}
 
 			double targetPosition = Math.Abs(Height * (1 - FullExpandedRatio));
 			if (_bottomSheet is not null)
@@ -2127,7 +2131,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				_bottomSheet.HeightRequest = Height * FullExpandedRatio;
 			}
 
-		    return targetPosition;
+			return targetPosition;
 		}
 
 		/// <summary>
@@ -2136,7 +2140,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>The calculated position for the collapsed state.</returns>
 		double GetCollapsedPosition()
 		{
-		    double targetPosition = Height - CollapsedHeight;
+			double targetPosition = Height - CollapsedHeight;
 			return targetPosition;
 		}
 
@@ -2146,7 +2150,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>The calculated target position for the half-expanded state.</returns>
 		double GetHalfExpandedPosition()
 		{
-		    double targetPosition = Height * (1 - HalfExpandedRatio);
+			double targetPosition = Height * (1 - HalfExpandedRatio);
 			if (_bottomSheet is not null)
 			{
 				if (!_isSheetOpen || _bottomSheet.TranslationY > targetPosition)
@@ -2156,7 +2160,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				}
 			}
 
-		    return targetPosition;
+			return targetPosition;
 		}
 
 		/// <summary>
@@ -2172,7 +2176,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 			}
 
 			int animationDuration = this.GetClampedAnimationDuration();
-		    const int topPadding = 2;
+			const int topPadding = 2;
 			_isSheetOpen = true;
 			if (_bottomSheet is not null)
 			{
@@ -2238,11 +2242,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void UpdateBottomSheetVisibility()
 		{
-			if(IsOpen && !_isSheetOpen)
+			if (IsOpen && !_isSheetOpen)
 			{
 				Show();
 			}
-			else if(!IsOpen && _isSheetOpen)
+			else if (!IsOpen && _isSheetOpen)
 			{
 				Close();
 			}
@@ -2258,15 +2262,15 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				return;
 			}
 
-		    if (State is BottomSheetState.HalfExpanded)
-		    {
-		        _bottomSheet.HeightRequest = Height * HalfExpandedRatio;
-		    }
-		    else if (State is BottomSheetState.Collapsed)
-		    {
-		        _bottomSheet.HeightRequest = CollapsedHeight;
-		    }
-			else if(State is BottomSheetState.FullExpanded)
+			if (State is BottomSheetState.HalfExpanded)
+			{
+				_bottomSheet.HeightRequest = Height * HalfExpandedRatio;
+			}
+			else if (State is BottomSheetState.Collapsed)
+			{
+				_bottomSheet.HeightRequest = CollapsedHeight;
+			}
+			else if (State is BottomSheetState.FullExpanded)
 			{
 				_bottomSheet.HeightRequest = Height * FullExpandedRatio;
 			}
@@ -2283,7 +2287,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 #if IOS || MACCATALYST || ANDROID
 		    return point.Y + Height - _bottomSheet?.HeightRequest ?? 0;
 #else
-		    return point.Y;
+			return point.Y;
 #endif
 		}
 
@@ -2293,9 +2297,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="touchY">The Y coordinate of the touch point.</param>
 		void HandleTouchPressed(double touchY)
 		{
-		    _initialTouchY = touchY;
-		    _isPointerPressed = true;
-		    _startTouchY = _initialTouchY;
+			_initialTouchY = touchY;
+			_isPointerPressed = true;
+			_startTouchY = _initialTouchY;
 		}
 
 
@@ -2305,20 +2309,20 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="touchY">The current Y coordinate of the touch point.</param>
 		void HandleTouchMoved(double touchY)
 		{
-		    if (!_isPointerPressed || _bottomSheet == null)
-		    {
-		        return;
-		    }
+			if (!_isPointerPressed || _bottomSheet == null)
+			{
+				return;
+			}
 
-		    double diffY = touchY - _initialTouchY;
-		    double newTranslationY = Math.Max(0, _bottomSheet.TranslationY + diffY);
+			double diffY = touchY - _initialTouchY;
+			double newTranslationY = Math.Max(0, _bottomSheet.TranslationY + diffY);
 
-		    if (ShouldRestrictMovement(newTranslationY, diffY))
-		    {
-		        return;
-		    }
+			if (ShouldRestrictMovement(newTranslationY, diffY))
+			{
+				return;
+			}
 
-		    UpdateBottomSheetPosition(newTranslationY, touchY);
+			UpdateBottomSheetPosition(newTranslationY, touchY);
 		}
 
 
@@ -2330,10 +2334,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>True if movement should be restricted, false otherwise.</returns>
 		bool ShouldRestrictMovement(double newTranslationY, double diffY)
 		{
-		    if (_bottomSheet is null)
-		    {
-		        return false;
-		    }
+			if (_bottomSheet is null)
+			{
+				return false;
+			}
 
 			double endPosition = 0;
 			double updatedHeight = Height - newTranslationY;
@@ -2353,10 +2357,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 			}
 
 			bool isHalfExpandedAndRestricted = State is BottomSheetState.HalfExpanded &&
-		                                       AllowedState is BottomSheetAllowedState.HalfExpanded &&
-		                                       updatedHeight > endPosition;
+											   AllowedState is BottomSheetAllowedState.HalfExpanded &&
+											   updatedHeight > endPosition;
 
-		    bool isCollapsedAndMovingDown = State is BottomSheetState.Collapsed && updatedHeight < endPosition;
+			bool isCollapsedAndMovingDown = State is BottomSheetState.Collapsed && updatedHeight < endPosition;
 
 			bool isFullExpandedRestricted = State is BottomSheetState.FullExpanded &&
 											updatedHeight > endPosition;
@@ -2374,14 +2378,14 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="touchY">The current Y coordinate of the touch point.</param>
 		void UpdateBottomSheetPosition(double newTranslationY, double touchY)
 		{
-		    if (_bottomSheet is null)
-		    {
-		        return;
-		    }
+			if (_bottomSheet is null)
+			{
+				return;
+			}
 
-		    _bottomSheet.TranslationY = newTranslationY;
-		    _initialTouchY = touchY;
-		    _bottomSheet.HeightRequest = Height - newTranslationY;
+			_bottomSheet.TranslationY = newTranslationY;
+			_initialTouchY = touchY;
+			_bottomSheet.HeightRequest = Height - newTranslationY;
 			// Manage overlay visibility during touch
 			bool shouldShowOverlay = IsModal && (_bottomSheet.HeightRequest > CollapsedHeight);
 
@@ -2424,11 +2428,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="touchY">The Y coordinate of the touch point when released.</param>
 		void HandleTouchReleased(double touchY)
 		{
-		    _endTouchY = _initialTouchY;
-		    _initialTouchY = 0;
-		    _isPointerPressed = false;
+			_endTouchY = _initialTouchY;
+			_initialTouchY = 0;
+			_isPointerPressed = false;
 
-		    if(_bottomSheet is not null)
+			if (_bottomSheet is not null)
 			{
 				UpdatePosition();
 			}
@@ -2439,20 +2443,20 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// Updates the height and position of the bottom sheet when it's in a half-expanded state.
 		/// </summary>
 		/// <param name="height">The total height available for the bottom sheet.</param>
-	    void UpdateHalfExpandedHeight(double height)
+		void UpdateHalfExpandedHeight(double height)
 		{
-		    if (_bottomSheet is { } sheet)
-		    {
-		        sheet.TranslationY = height * (1 - HalfExpandedRatio);
-		        sheet.HeightRequest = height * HalfExpandedRatio;
-		    }
+			if (_bottomSheet is { } sheet)
+			{
+				sheet.TranslationY = height * (1 - HalfExpandedRatio);
+				sheet.HeightRequest = height * HalfExpandedRatio;
+			}
 		}
 
 		/// <summary>
 		/// Updates the height and position of the bottom sheet when it's in a collapsed state.
 		/// </summary>
 		/// <param name="height">The total height available for the bottom sheet.</param>
-	    void UpdateCollapsedHeight(double height)
+		void UpdateCollapsedHeight(double height)
 		{
 			if (_bottomSheet is not null)
 			{
@@ -2467,21 +2471,21 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="height">The height to be applied to the bottom sheet.</param>
 		void UpdateBottomSheetHeight(double height)
 		{
-		    switch (State)
-		    {
-		        case BottomSheetState.Hidden:
-		            SetBottomSheetHidden();
-		            break;
+			switch (State)
+			{
+				case BottomSheetState.Hidden:
+					SetBottomSheetHidden();
+					break;
 				case BottomSheetState.Collapsed:
 					UpdateCollapsedHeight(height);
 					break;
 				case BottomSheetState.HalfExpanded:
-		            UpdateHalfExpandedHeight(height);
-		            break;
-		        case BottomSheetState.FullExpanded:
-		            SetBottomSheetFullyExpanded(height);
-		            break;
-		    }
+					UpdateHalfExpandedHeight(height);
+					break;
+				case BottomSheetState.FullExpanded:
+					SetBottomSheetFullyExpanded(height);
+					break;
+			}
 		}
 
 		/// <summary>
@@ -2529,14 +2533,14 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="height">The allocated height.</param>
 		protected override void OnSizeAllocated(double width, double height)
 		{
-		    base.OnSizeAllocated(width, height);
+			base.OnSizeAllocated(width, height);
 
-		    if (_bottomSheet is null || height <= 0 || height is double.PositiveInfinity)
-		    {
-		        return;
-		    }
+			if (_bottomSheet is null || height <= 0 || height is double.PositiveInfinity)
+			{
+				return;
+			}
 
-		    UpdateBottomSheetHeight(height);
+			UpdateBottomSheetHeight(height);
 		}
 
 		/// <summary>
@@ -2544,8 +2548,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		protected override void OnHandlerChanged()
 		{
-		    base.OnHandlerChanged();
-		    ConfigurePlatformSpecificBehavior();
+			base.OnHandlerChanged();
+			ConfigurePlatformSpecificBehavior();
 		}
 
 		#endregion
@@ -2560,8 +2564,8 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new value of the IsModal property.</param>
 		static void OnIsModalPropertyChanged(BindableObject bindable, object oldValue, object newValue)
 		{
-		    if (bindable is SfBottomSheet sheet)
-		    {
+			if (bindable is SfBottomSheet sheet)
+			{
 				bool isModal = (bool)newValue;
 
 				if (isModal && (sheet.State is BottomSheetState.FullExpanded or BottomSheetState.HalfExpanded))
@@ -2585,14 +2589,14 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new value of the ShowGrabber property.</param>
 		static void OnShowGrabberPropertyChanged(BindableObject bindable, object oldValue, object newValue)
 		{
-		    if (bindable is SfBottomSheet sheet)
-		    {
-		        if (sheet._grabber is not null)
-		        {
-		            sheet._grabber.IsVisible = sheet.ShowGrabber;
-		            sheet.UpdateRowHeight();
-		        }
-		    }
+			if (bindable is SfBottomSheet sheet)
+			{
+				if (sheet._grabber is not null)
+				{
+					sheet._grabber.IsVisible = sheet.ShowGrabber;
+					sheet.UpdateRowHeight();
+				}
+			}
 		}
 
 		/// <summary>
@@ -2620,13 +2624,13 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newValue">The new value of the Content property.</param>
 		static void OnContentPropertyChanged(BindableObject bindable, object oldValue, object newValue)
 		{
-		    if (bindable is SfBottomSheet sheet)
-		    {
-		        if (newValue is View newContent)
-		        {
-		            sheet.SetBottomSheetContent(newContent);
-		        }
-		    }
+			if (bindable is SfBottomSheet sheet)
+			{
+				if (newValue is View newContent)
+				{
+					sheet.SetBottomSheetContent(newContent);
+				}
+			}
 		}
 
 		/// <summary>
@@ -2671,10 +2675,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 					sheet.Close();
 				}
 			}
-			else if(newState == BottomSheetState.Collapsed)
+			else if (newState == BottomSheetState.Collapsed)
 			{
 				sheet._isHalfExpanded = true;
-				if(sheet._isSheetOpen)
+				if (sheet._isSheetOpen)
 				{
 					sheet.Show();
 				}
@@ -2935,7 +2939,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <returns>A ResourceDictionary containing the theme styles for the control.</returns>
 		public ResourceDictionary GetThemeDictionary()
 		{
-		    return new SfBottomSheetStyle();
+			return new SfBottomSheetStyle();
 		}
 
 		/// <summary>
@@ -2945,9 +2949,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newTheme">The new theme.</param>
 		public void OnControlThemeChanged(string oldTheme, string newTheme)
 		{
-		    // TODO: Implement control-specific theme change logic
+			// TODO: Implement control-specific theme change logic
 		}
-		
+
 		/// <summary>
 		/// Handles changes to the common theme.
 		/// </summary>
@@ -2955,7 +2959,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// <param name="newTheme">The new theme.</param>
 		public void OnCommonThemeChanged(string oldTheme, string newTheme)
 		{
-		    // TODO: Implement common theme change logic
+			// TODO: Implement common theme change logic
 		}
 
 		#endregion
