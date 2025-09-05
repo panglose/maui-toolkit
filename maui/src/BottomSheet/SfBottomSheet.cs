@@ -423,6 +423,17 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 			true,
 			BindingMode.Default);
 
+		/// <summary>
+		/// Identifies the <see cref="EnableSwipeToHide"/> bindable property.
+		/// When true, a swipe (pan) vers le bas depuis l'état Collapsed peut fermer (Hidden) le bottom sheet.
+		/// Default: false.
+		/// </summary>
+		public static readonly BindableProperty EnableSwipeToHideProperty = BindableProperty.Create(
+			 nameof(EnableSwipeToHide),
+			 typeof(bool),
+			 typeof(SfBottomSheet),
+			 false);
+
 		// Grabber customization
 		/// <summary>
 		/// Identifies the <see cref="GrabberHeight"/> bindable property.
@@ -1046,6 +1057,16 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		{
 			get => (bool)GetValue(EnableSwipingProperty);
 			set => SetValue(EnableSwipingProperty, value);
+		}
+
+		/// <summary>
+		/// Gets or sets a value indicating whether a downward swipe from the Collapsed state can hide (close) the bottom sheet.
+		/// </summary>
+		/// <value>False (default) = le swipe vers le bas ne ferme pas. True = autorise la fermeture par geste.</value>
+		public bool EnableSwipeToHide
+		{
+			get => (bool)GetValue(EnableSwipeToHideProperty);
+			set => SetValue(EnableSwipeToHideProperty, value);
 		}
 
 		/// <summary>
@@ -1989,6 +2010,11 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 					UpdateStateBasedOnNearestPoint();
 				}
 			}
+			else if (EnableSwipeToHide && swipeDistance > swipeThreshold)
+			{
+				// Fermeture via geste vers le bas depuis Collapsed.
+				Close();
+			}
 			else
 			{
 				Show();
@@ -2356,16 +2382,26 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 					break;
 			}
 
-			bool isHalfExpandedAndRestricted = State is BottomSheetState.HalfExpanded &&
-											   AllowedState is BottomSheetAllowedState.HalfExpanded &&
-											   updatedHeight > endPosition;
+			bool isHalfExpandedAndRestricted =
+				State is BottomSheetState.HalfExpanded &&
+				AllowedState is BottomSheetAllowedState.HalfExpanded &&
+				updatedHeight > endPosition;
 
-			bool isCollapsedAndMovingDown = State is BottomSheetState.Collapsed && updatedHeight < endPosition;
+			// Bloqué seulement si la descente est interdite (EnableSwipeToHide == false)
+			bool isCollapsedAndMovingDown =
+				State is BottomSheetState.Collapsed &&
+				updatedHeight < endPosition &&
+				!EnableSwipeToHide;
 
-			bool isFullExpandedRestricted = State is BottomSheetState.FullExpanded &&
-											updatedHeight > endPosition;
+			bool isFullExpandedRestricted =
+				State is BottomSheetState.FullExpanded &&
+				updatedHeight > endPosition;
 
-			bool isBehind = (newTranslationY > Height - CollapsedHeight) || (newTranslationY < Height * (1 - FullExpandedRatio));
+			// Si on autorise la fermeture par swipe, on permet d'aller jusqu'à Height (complètement en bas)
+			bool isBehind =
+				(newTranslationY < Height * (1 - FullExpandedRatio)) ||
+				(!EnableSwipeToHide && newTranslationY > Height - CollapsedHeight) ||
+				(EnableSwipeToHide && newTranslationY > Height); // dépassement total non autorisé
 
 			return isHalfExpandedAndRestricted || isCollapsedAndMovingDown || isFullExpandedRestricted || isBehind;
 		}
