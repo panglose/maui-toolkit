@@ -1239,6 +1239,10 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 			set => SetValue(AnimationDurationProperty, value);
 		}
 
+		/// <summary>
+		/// Obtenir la bordure du contenu du bottom sheet.
+		/// </summary>
+		public Border? BottomSheetBorder => _bottomSheet;
 		#endregion
 
 		#region Internal Properties
@@ -1927,7 +1931,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// </summary>
 		void UpdatePosition()
 		{
-			const double SwipeThreshold = 100;
+			const double SwipeThreshold = 50;
 			const double DoubleSwipeThreshold = SwipeThreshold * 2;
 			double swipeDistance = _endTouchY - _startTouchY;
 
