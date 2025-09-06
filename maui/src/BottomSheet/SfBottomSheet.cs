@@ -558,7 +558,6 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		#endregion
 
 		#region Properties
-
 		/// <summary>
 		/// Gets or sets the view that can be used to customize the main content of the SfBottomSheet.
 		/// </summary>
@@ -1246,6 +1245,9 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		#endregion
 
 		#region Internal Properties
+		private double FullExpandedY => Height * (1 - FullExpandedRatio);
+		private double HalfExpandedY => Height * (1 - HalfExpandedRatio);
+		private double CollapsedY => Height - CollapsedHeight;
 
 		/// <summary>
 		/// Gets or sets the background color of the overlay grid.
@@ -1959,7 +1961,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		{
 			if (swipeDistance > swipeThreshold && AllowedState is not BottomSheetAllowedState.FullExpanded)
 			{
-				UpdateStateBasedOnNearestPoint();
+				UpdateStateBasedOnNearestPoint([HalfExpandedY, CollapsedY]);
 			}
 			else if (swipeDistance > doubleSwipeThreshold)
 			{
@@ -2011,7 +2013,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 				}
 				else
 				{
-					UpdateStateBasedOnNearestPoint();
+					UpdateStateBasedOnNearestPoint([HalfExpandedY, FullExpandedY]);
 				}
 			}
 			else if (EnableSwipeToHide && swipeDistance > swipeThreshold)
@@ -2025,22 +2027,27 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 			}
 		}
 
+
+
+
 		/// <summary>
 		/// Methods to update the bottom sheet's state based on the nearest point.
 		/// </summary>
 		void UpdateStateBasedOnNearestPoint()
 		{
-			double fullExpandedHeight = Height * (1 - FullExpandedRatio);
-			double halfExpandedHeight = Height * (1 - HalfExpandedRatio);
-			double collapsedHeight = Height - CollapsedHeight;
 			List<double> predefinedPoints = new List<double>
-					{
-						fullExpandedHeight, halfExpandedHeight, collapsedHeight
-					};
+			{
+				FullExpandedY, HalfExpandedY, CollapsedY
+			};
 
+			UpdateStateBasedOnNearestPoint(predefinedPoints);
+		}
+
+		private void UpdateStateBasedOnNearestPoint(List<double> predefinedPoints)
+		{
 			double nearestPoint = predefinedPoints.OrderBy(p => Math.Abs(p - _endTouchY)).First();
 
-			if (nearestPoint == fullExpandedHeight)
+			if (nearestPoint == FullExpandedY)
 			{
 				if (State is not BottomSheetState.FullExpanded)
 				{
@@ -2051,7 +2058,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 					Show();
 				}
 			}
-			else if (nearestPoint == halfExpandedHeight)
+			else if (nearestPoint == HalfExpandedY)
 			{
 				State = BottomSheetState.HalfExpanded;
 			}
