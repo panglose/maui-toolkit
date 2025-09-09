@@ -2332,7 +2332,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// Handles the initial touch press event on the bottom sheet.
 		/// </summary>
 		/// <param name="touchY">The Y coordinate of the touch point.</param>
-		void HandleTouchPressed(double touchY)
+		protected void HandleTouchPressed(double touchY)
 		{
 			_initialTouchY = touchY;
 			_isPointerPressed = true;
@@ -2344,7 +2344,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// Handles touch movement on the bottom sheet.
 		/// </summary>
 		/// <param name="touchY">The current Y coordinate of the touch point.</param>
-		void HandleTouchMoved(double touchY)
+		protected void HandleTouchMoved(double touchY)
 		{
 			if (!_isPointerPressed || _bottomSheet == null)
 			{
@@ -2473,7 +2473,7 @@ namespace Syncfusion.Maui.Toolkit.BottomSheet
 		/// Handles the touch release event on the bottom sheet.
 		/// </summary>
 		/// <param name="touchY">The Y coordinate of the touch point when released.</param>
-		void HandleTouchReleased(double touchY)
+		protected void HandleTouchReleased(double touchY)
 		{
 			_endTouchY = _initialTouchY;
 			_initialTouchY = 0;
