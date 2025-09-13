@@ -1065,6 +1065,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal virtual void OnScrollChanged(IChart chart, Point touchPoint, Point translatePoint)
 		{
+			//évite toute dérive verticale
+			translatePoint = new Point(translatePoint.X, 0);
+
 			var clipRect = chart.ActualSeriesClipRect;
 #if MACCATALYST || IOS
 			_isScrollChanged = true;
@@ -1251,6 +1254,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal virtual bool TouchHandled(SfCartesianChart cartesian, Point velocity)
 		{
+			//evite toute dérive verticale
+			velocity = new Point(velocity.X, 0);
+
 			var area = cartesian._chartArea;
 			bool isPanEnd = true;
 

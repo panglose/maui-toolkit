@@ -48,7 +48,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		List<TrackballAxisInfo> _previousAxisPointInfos;
 		ChartLabelStyle _actualLabelStyle;
 		List<List<TrackballPointInfo>>? _intersectedGroups;
-		bool _canAutoHideOnExit;
+		// Removed auto hide support field.
+		// bool _canAutoHideOnExit; 
+
+		// Trackball lock support
+		bool _isLocked;
+		ChartAxis? _lockedAxis;
+		double _lockedXValue = double.NaN;
+		// Old pending regen flag removed; now we track if the locked position is currently outside viewport
+		bool _isLockedOutside;
 
 		#endregion
 
@@ -62,6 +70,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal List<TrackballPointInfo> PreviousPointInfos { get; set; }
 		internal List<SfTooltip> ContentList { get; set; }
 		internal SfTooltip? GroupedLabelView { get; set; }
+		internal bool IsLocked => _isLocked;
 
 		/// <summary>
 		/// Identifies the <see cref="TrackballBackground"/> bindable property.
@@ -250,16 +259,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			typeof(ChartTrackballBehavior),
 			null,
 			defaultValueCreator: DefaultActivationMode);
-
-		/// <summary>
-		/// Identifies the <see cref="AutoHide"/> bindable property.
-		/// </summary>
-		/// <remarks>
-		/// Controls whether the trackball is automatically hidden when the pointer (finger or mouse) is released.
-		/// The default value is <c>true</c>. Set to <c>false</c> to keep the trackball visible after a touch gesture.
-		/// </remarks>
-		public static readonly BindableProperty AutoHideProperty = BindableProperty.Create(
-			nameof(AutoHide), typeof(bool), typeof(ChartTrackballBehavior), true);
 		#endregion
 
 		#region Public Properties
@@ -692,15 +691,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			set { SetValue(ActivationModeProperty, value); }
 		}
 
-		/// <summary>
-		/// Gets or sets a value indicating whether the trackball should be automatically hidden on touch gesture
-		/// </summary>
-		/// <value><c>true</c> to hide the trackball automatically on touch gesture; otherwise <c>false</c>. Default is <c>true</c>.</value>
-		public bool AutoHide
-		{
-			get => (bool)GetValue(AutoHideProperty);
-			set => SetValue(AutoHideProperty, value);
-		}
 		#endregion
 
 		#region Constructor
@@ -760,6 +750,12 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		/// </summary>
 		public virtual void Show(float pointX, float pointY)
 		{
+			// When locked we ignore user driven move events (refresh logic will temporarily unlock).
+			if (_isLocked)
+			{
+				return;
+			}
+
 			if (CartesianChart == null || CartesianChart is not IChart chart || CartesianChart._chartArea is not CartesianChartArea area)
 			{
 				return;
@@ -797,7 +793,12 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			GroupedLabelView = null;
 			_axisPointInfos.Clear();
 			Invalidate();
+			_isLocked = false;
+			_lockedAxis = null;
+			_lockedXValue = double.NaN;
+			_isLockedOutside = false;
 		}
+
 
 		#endregion
 
@@ -851,27 +852,24 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		/// <inheritdoc/>
 		protected internal override void OnTouchMove(ChartBase chart, float pointX, float pointY)
 		{
+			if (_isLocked)
+			{
+				return; // ignore move when locked
+			}
+
 			if (chart.SeriesBounds.Contains(pointX, pointY))
 			{
 				if (ActivationMode == ChartTrackballActivationMode.TouchMove)
 				{
-					_canAutoHideOnExit = true;
 					Show(pointX, pointY);
 				}
 				else if (ActivationMode == ChartTrackballActivationMode.LongPress)
 				{
-					_canAutoHideOnExit = true;
-
 					if (LongPressActive)
 					{
 						Show(pointX, pointY);
 					}
 				}
-			}
-			else if (AutoHide)
-			{
-				_canAutoHideOnExit = false;
-				Hide();
 			}
 		}
 
@@ -884,29 +882,25 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 
 			LongPressActive = false;
-
-			if (AutoHide)
-			{
-				Hide();
-			}
+			// Do not hide automatically.
 		}
 
 		/// <inheritdoc/>
 		protected internal override void OnTouchDown(ChartBase chart, float pointX, float pointY)
 		{
 #if WINDOWS || MACCATALYST
-            if (ActivationMode == ChartTrackballActivationMode.TouchMove && DeviceType == PointerDeviceType.Touch)
+			if (ActivationMode == ChartTrackballActivationMode.TouchMove && DeviceType == PointerDeviceType.Touch)
 #elif IOS || ANDROID
 			if (ActivationMode == ChartTrackballActivationMode.TouchMove)
 #endif
 			{
+				// Reset existing lock to allow selecting a new anchor point.
+				_isLocked = false;
+				_lockedAxis = null;
+				_lockedXValue = double.NaN;
+				_isLockedOutside = false;
 				IsPressed = true;
 				Show(pointX, pointY);
-			}
-
-			if (!IsPressed && AutoHide)
-			{
-				Hide();
 			}
 		}
 
@@ -928,9 +922,13 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				if ((cartesianChart.ZoomPanBehavior == null || cartesianChart.ZoomPanBehavior is ChartZoomPanBehavior behavior && !behavior.IsSelectionZoomingActivated) && ((status != GestureStatus.Completed && status != GestureStatus.Canceled) && ActivationMode == ChartTrackballActivationMode.LongPress))
 				{
 #if WINDOWS
-                    IsPressed = true;
+					IsPressed = true;
 #endif
 					LongPressActive = true;
+					_isLocked = false;
+					_lockedAxis = null;
+					_lockedXValue = double.NaN;
+					_isLockedOutside = false;
 					Show(pointX, pointY);
 				}
 			}
@@ -938,23 +936,13 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal override void OnTouchCancel(float x, float y)
 		{
-			if (LongPressActive)
-			{
-				LongPressActive = false;
-			}
-
-			if (AutoHide)
-			{
-				Hide();
-			}
+			LongPressActive = false;
+			// no auto hide
 		}
 
 		internal override void OnTouchExit()
 		{
-			if (_canAutoHideOnExit && AutoHide)
-			{
-				Hide();
-			}
+			// no auto hide
 		}
 
 		internal void DrawElements(ICanvas canvas, Rect dirtyRect)
@@ -966,7 +954,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 			var rect = dirtyRect.SubtractThickness(CartesianChart._chartArea.PlotAreaMargin);
 
-			if (ShowLine)
+			if (ShowLine && !_isLockedOutside && (_isLocked || PointInfos.Count > 0))
 			{
 				DrawTrackballLine(canvas);
 			}
@@ -974,7 +962,13 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			canvas.ResetStrokeDashPattern();
 			canvas.Translate(rect.Left, rect.Top);
 
-			DrawTrackballLabels(canvas); //Draw only if not grouped label. 
+			// When the locked position is outside, we avoid drawing labels/markers.
+			if (_isLockedOutside)
+			{
+				return;
+			}
+
+			DrawTrackballLabels(canvas);
 
 			foreach (var item in _axisPointInfos)
 			{
@@ -983,6 +977,94 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					item.Helper.Draw(canvas);
 				}
 			}
+		}
+
+		internal void RefreshLockedTrackball()
+		{
+			if (!_isLocked || CartesianChart == null)
+			{
+				return;
+			}
+
+			if (_lockedAxis == null || double.IsNaN(_lockedXValue))
+			{
+				return;
+			}
+
+			if (CartesianChart is not IChart chart)
+			{
+				return;
+			}
+
+			var clip = chart.ActualSeriesClipRect;
+			float px = (float)_lockedAxis.ValueToPoint(_lockedXValue) + (float)clip.Left;
+			float py = (float)(clip.Top + clip.Height / 2); // arbitrary vertical center
+
+			bool inside = px >= clip.Left && px <= clip.Right;
+
+			if (!inside)
+			{
+				if (!_isLockedOutside)
+				{
+					_isLockedOutside = true;
+					ClearLockedVisualsLeavingViewport();
+				}
+				return;
+			}
+
+			// Back inside viewport -> regenerate trackball visuals.
+			if (_isLockedOutside)
+			{
+				_isLockedOutside = false;
+			}
+
+			_isLocked = false; // temporarily unlock for regeneration
+			Show(px, py);
+			_isLocked = true; // lock again
+		}
+
+		// Ajoute cette méthode (placer dans la région Private Methods, avant GenerateTrackball par exemple).
+		void ClearLockedVisualsLeavingViewport()
+		{
+			if (CartesianChart == null)
+				return;
+
+			// Retirer les tooltips de points (templates individuels)
+			if (ContentList.Count > 0)
+			{
+				foreach (var t in ContentList)
+				{
+					if (CartesianChart._trackballView.Contains(t))
+						CartesianChart._trackballView.Remove(t);
+				}
+				ContentList.Clear();
+			}
+
+			// Retirer les tooltips d’axes
+			if (_axisPointInfos.Count > 0)
+			{
+				foreach (var axisInfo in _axisPointInfos)
+				{
+					if (axisInfo.AxisTemplateView != null && CartesianChart._trackballView.Contains(axisInfo.AxisTemplateView))
+					{
+						CartesianChart._trackballView.Remove(axisInfo.AxisTemplateView);
+					}
+				}
+			}
+
+			// Retirer la bulle groupée si présente
+			if (GroupedLabelView != null && CartesianChart._trackballView.Contains(GroupedLabelView))
+			{
+				CartesianChart._trackballView.Remove(GroupedLabelView);
+			}
+
+			GroupedLabelView = null;
+			_axisPointInfos.Clear();
+			_previousAxisPointInfos.Clear();
+			PointInfos.Clear();
+			PreviousPointInfos.Clear();
+
+			Invalidate();
 		}
 
 		#endregion
@@ -1029,6 +1111,14 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				}
 
 				UpdateTrackballPointInfos(pointX - (float)chart.ActualSeriesClipRect.Left, pointY - (float)chart.ActualSeriesClipRect.Top);
+				// Lock after first successful generation if not already locked.
+				if (!_isLocked && PointInfos.Count > 0)
+				{
+					_lockedAxis = PointInfos[0].Series.ActualXAxis;
+					_lockedXValue = PointInfos[0].XValue;
+					_isLockedOutside = false;
+					_isLocked = true;
+				}
 				Invalidate();
 			}
 		}
@@ -1054,7 +1144,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				_linePoint2 = new Point(leastX - SeriesBounds.Left, SeriesBounds.Top + SeriesBounds.Height);
 			}
 
-			//TODO: Validate for group label.
 			if (DisplayMode == LabelDisplayMode.NearestPoint || (_isAnySideBySideSeries && DisplayMode != LabelDisplayMode.GroupAllPoints))
 			{
 				ValidateTrackballBehaviorForAllSeries(leastX, pointX, pointY);
@@ -1062,7 +1151,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 			if (PointInfos.Count == 0)
 			{
-				// if point info zero means the axis and previous trackball info no need to create ,so remove the template view from layout.
 				Hide();
 				return;
 			}
@@ -2212,17 +2300,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		#region Properties
 
 		public ChartAxis Axis { get; set; }
-
 		public float X { get; set; }
-
 		public float Y { get; set; }
-
 		public TooltipHelper Helper { get; set; }
-
 		internal string Label { get; set; }
-
 		internal SfTooltip? AxisTemplateView { get; set; }
-
 		internal bool HasTrackballAxisTemplate => Axis.TrackballLabelTemplate != null;
 
 		#endregion

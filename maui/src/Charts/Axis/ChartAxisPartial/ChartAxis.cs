@@ -1,7 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using Syncfusion.Maui.Toolkit.Themes;
 using Syncfusion.Maui.Toolkit.Graphics.Internals;
+using Syncfusion.Maui.Toolkit.Themes;
 
 namespace Syncfusion.Maui.Toolkit.Charts
 {
@@ -2421,9 +2421,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 
 			if (TrackballLabelStyle != null)
-            {
-                SetInheritedBindingContext(TrackballLabelStyle, BindingContext);
-            }
+			{
+				SetInheritedBindingContext(TrackballLabelStyle, BindingContext);
+			}
 
 			if (ActualPlotBands != null)
 			{
@@ -2479,6 +2479,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					band.Parent = Parent;
 				}
 			}
+
+			RefreshLockedTrackballIfNeeded();
 		}
 
 		#endregion
@@ -2948,6 +2950,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				{
 					//TODO: Set new factor to actual value;
 					axis.UpdateLayout();
+					axis.RefreshLockedTrackballIfNeeded();
+
 				}
 			}
 		}
@@ -2964,9 +2968,40 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				{
 					//TODO: Set new position to actual value;
 					axis.UpdateLayout();
+					axis.RefreshLockedTrackballIfNeeded();
 				}
 			}
 		}
+
+		#region Trackball Refresh Helpers
+
+		internal SfCartesianChart? GetOwningChart()
+		{
+			// Parent devient le chart après ajout dans XAxes / YAxes.
+			return Parent as SfCartesianChart;
+		}
+
+		void RefreshLockedTrackballIfNeeded()
+		{
+			var chart = GetOwningChart();
+			if (chart == null)
+				return;
+
+			var trackball = chart.TrackballBehavior;
+			if (trackball is { IsLocked: true })
+			{
+				if (chart.Dispatcher != null)
+				{
+					chart.Dispatcher.Dispatch(trackball.RefreshLockedTrackball);
+				}
+				else
+				{
+					Microsoft.Maui.ApplicationModel.MainThread.BeginInvokeOnMainThread(trackball.RefreshLockedTrackball);
+				}
+			}
+		}
+
+		#endregion
 
 		void Style_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{

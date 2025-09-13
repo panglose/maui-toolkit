@@ -25,7 +25,7 @@ namespace Syncfusion.Maui.Toolkit.Charts.Chart.Layouts
 
 		protected override void OnDraw(ICanvas canvas, RectF dirtyRect)
 		{
-			if (Behavior?.PointInfos.Count > 0)
+			if (Behavior != null && (Behavior.PointInfos.Count > 0 || Behavior.IsLocked))
 			{
 				canvas.CanvasSaveState();
 				Behavior.DrawElements(canvas, dirtyRect);

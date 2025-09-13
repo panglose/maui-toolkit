@@ -405,7 +405,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		ITapGestureListener,
 		IPanGestureListener,
 		IPinchGestureListener,
-		/*ILongPressGestureListener,*/ //désactivé le longpress pour permettre du Scroll PAN après un LongPress
+		ILongPressGestureListener,
 		IParentThemeElement
 	{
 		#region Fields
@@ -1429,10 +1429,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 		}
 
-		/*
-		 * Interface ILongPressGestureListener 
-		 * est désactivé pour permettre de faire un PAN Scroll même après un long press
-		 * 
 		void ILongPressGestureListener.OnLongPress(LongPressEventArgs e)
 		{
 			Point point = e.TouchPoint;
@@ -1450,7 +1446,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			TrackballBehavior?.OnLongPressActivation(this, (float)x, (float)y, status);
 
 		}
-		*/
 
 		/// <inheritdoc/>
 		void ITouchListener.OnScrollWheel(ScrollEventArgs e)
@@ -1508,28 +1503,19 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal void OnPinchStateChanged(GestureStatus action, Point location, double angle, float scale)
 		{
 			HideTooltipView();
-			HideTrackballView();
+
+			TrackballBehavior?.RefreshLockedTrackball();
 
 			ZoomPanBehavior?.OnPinchStateChanged(this, action, location, angle, scale);
 		}
 
 		internal void OnPanStateChanged(Point touchPoint, Point translatePoint)
 		{
-#if WINDOWS
-			if (TrackballBehavior != null && TrackballBehavior.LongPressActive)
-			{
-				return;
-			}
-#endif
-
 #if WINDOWS || MACCATALYST
 			HideTooltipView();
 #endif
 
-			if (TrackballBehavior != null && !TrackballBehavior.IsPressed)
-			{
-				HideTrackballView();
-			}
+			TrackballBehavior?.RefreshLockedTrackball();
 
 			ZoomPanBehavior?.OnScrollChanged(this, touchPoint, translatePoint);
 		}
@@ -1550,11 +1536,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal void OnTapAction(IChart chart, Point tapPoint, int tapCount)
 		{
 			HideTooltipView();
-
-			if (TrackballBehavior?.AutoHide == true)
-			{
-				HideTrackballView();
-			}
 
 			if (chart.ActualSeriesClipRect.Contains(tapPoint))
 			{
