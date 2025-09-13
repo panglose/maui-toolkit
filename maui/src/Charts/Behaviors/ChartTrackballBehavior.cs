@@ -979,7 +979,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 		}
 
-		internal void RefreshLockedTrackball()
+		public void RefreshLockedTrackball()
 		{
 			if (!_isLocked || CartesianChart == null)
 			{
