@@ -56,9 +56,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		// Trackball lock support
 		bool _isLocked;
-		ChartAxis? _lockedAxis;
+		ChartAxis? _lockedXAxis;
+		ChartAxis? _lockedYAxis;
 		double _lockedXValue = double.NaN;
-		// Old pending regen flag removed; now we track if the locked position is currently outside viewport
+		double _lockedYValue = double.NaN;
+		double _lockedYDataValue = double.NaN;
 		bool _isLockedOutside;
 
 		#endregion
@@ -797,8 +799,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			_axisPointInfos.Clear();
 			Invalidate();
 			_isLocked = false;
-			_lockedAxis = null;
+			_lockedXAxis = null;
+			_lockedYAxis = null;
 			_lockedXValue = double.NaN;
+			_lockedYValue = double.NaN;
+			_lockedYDataValue = double.NaN;
 			_isLockedOutside = false;
 		}
 
@@ -880,13 +885,17 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		protected internal override void OnTouchUp(ChartBase chart, float pointX, float pointY)
 		{
 			if (IsPressed)
-			{
 				IsPressed = false;
-			}
 
-			LongPressActive = false;
+			if (LongPressActive)
+				LongPressActive = false;
 
 			_hapticFired = false;
+
+			if (!_isLocked)
+			{
+				LockCurrentPosition(); // <--- AJOUT
+			}
 		}
 
 		/// <inheritdoc/>
@@ -898,9 +907,10 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			if (ActivationMode == ChartTrackballActivationMode.TouchMove)
 #endif
 			{
-				// Reset existing lock to allow selecting a new anchor point.
 				_isLocked = false;
-				_lockedAxis = null;
+				_lockedXAxis = null;
+				_lockedYAxis = null;          // <--- AJOUT
+				_lockedYDataValue = double.NaN; // <--- AJOUT
 				_lockedXValue = double.NaN;
 				_isLockedOutside = false;
 				IsPressed = true;
@@ -923,25 +933,25 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		{
 			if (chart is SfCartesianChart cartesianChart)
 			{
-				if ((cartesianChart.ZoomPanBehavior == null || cartesianChart.ZoomPanBehavior is ChartZoomPanBehavior behavior && !behavior.IsSelectionZoomingActivated) && ((status != GestureStatus.Completed && status != GestureStatus.Canceled) && ActivationMode == ChartTrackballActivationMode.LongPress))
+				if ((cartesianChart.ZoomPanBehavior == null || cartesianChart.ZoomPanBehavior is ChartZoomPanBehavior behavior && !behavior.IsSelectionZoomingActivated)
+					&& ((status != GestureStatus.Completed && status != GestureStatus.Canceled) && ActivationMode == ChartTrackballActivationMode.LongPress))
 				{
-#if WINDOWS
-					IsPressed = true;
-#endif
+					IsPressed = true; // <--- élargi à toutes plateformes pour cohérence
 					LongPressActive = true;
 					_isLocked = false;
-					_lockedAxis = null;
+					_lockedXAxis = null;
+					_lockedYAxis = null;          // <--- AJOUT
+					_lockedYDataValue = double.NaN; // <--- AJOUT
 					_lockedXValue = double.NaN;
 					_isLockedOutside = false;
 
 					if (!_hapticFired && HapticFeedback.Default.IsSupported)
 					{
 						HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-
 						_hapticFired = true;
 					}
 
-					Show(pointX, pointY);
+					Show(pointX, pointY); // suit le doigt pendant le long press
 				}
 			}
 		}
@@ -949,8 +959,12 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal override void OnTouchCancel(float x, float y)
 		{
 			LongPressActive = false;
-
 			_hapticFired = false;
+
+			if (!_isLocked)
+			{
+				LockCurrentPosition(); // <--- AJOUT (optionnel mais sûr)
+			}
 		}
 
 		internal override void OnTouchExit()
@@ -967,9 +981,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 			var rect = dirtyRect.SubtractThickness(CartesianChart._chartArea.PlotAreaMargin);
 
-			if (ShowLine && !_isLockedOutside && (_isLocked || PointInfos.Count > 0))
+			// Draw vertical and horizontal lines before translating so coordinates align with SeriesBounds.
+			if (ShowLine && (_isLocked || PointInfos.Count > 0))
 			{
-				DrawTrackballLine(canvas);
+				if (!_isLockedOutside)
+				{
+					DrawTrackballLine(canvas); // vertical line only when inside viewport
+				}
+				// Horizontal line always (if we have a Y reference)
+				DrawHorizontalTrackballLine(canvas);
 			}
 
 			canvas.ResetStrokeDashPattern();
@@ -995,29 +1015,17 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal void RefreshLockedTrackball()
 		{
 			if (!_isLocked || CartesianChart == null)
-			{
 				return;
-			}
-
-			if (_lockedAxis == null || double.IsNaN(_lockedXValue))
-			{
+			if (_lockedXAxis == null || double.IsNaN(_lockedXValue))
 				return;
-			}
-
 			if (CartesianChart is not IChart chart)
-			{
 				return;
-			}
 
 			var clip = chart.ActualSeriesClipRect;
 			if (clip.Height <= 0 || clip.Width <= 0)
-			{
-				// Layout pas prêt, on attendra le prochain appel (après délai).
 				return;
-			}
 
-			float px = (float)_lockedAxis.ValueToPoint(_lockedXValue) + (float)clip.Left;
-
+			float px = (float)_lockedXAxis.ValueToPoint(_lockedXValue) + (float)clip.Left;
 			bool inside = px >= clip.Left && px <= clip.Right;
 
 			if (!inside)
@@ -1027,23 +1035,28 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					_isLockedOutside = true;
 					ClearLockedVisualsLeavingViewport();
 				}
+				Invalidate();
 				return;
 			}
 
 			if (_isLockedOutside)
-			{
 				_isLockedOutside = false;
-			}
 
-			// Reconstitution du Y d’origine (ratio sur la hauteur du clip)
 			float py;
-			if (_hasLastPointerY)
+			if (_lockedYAxis != null && !double.IsNaN(_lockedYDataValue))
 			{
-				py = (float)(clip.Top + (_lastPointerRelativeY * clip.Height));
+				// Reprojection data -> pixel
+				py = (float)_lockedYAxis.ValueToPoint(_lockedYDataValue) + (float)clip.Top;
 			}
 			else
 			{
-				py = (float)(clip.Top + clip.Height / 2f);
+				// Fallback : pixel verrouillé, sinon ratio
+				if (!double.IsNaN(_lockedYValue))
+					py = (float)_lockedYValue;
+				else if (_hasLastPointerY)
+					py = (float)(clip.Top + (_lastPointerRelativeY * clip.Height));
+				else
+					py = (float)(clip.Top + clip.Height / 2f);
 			}
 
 			_isLocked = false;
@@ -1051,7 +1064,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			_isLocked = true;
 		}
 
-		// Ajoute cette méthode (placer dans la région Private Methods, avant GenerateTrackball par exemple).
 		void ClearLockedVisualsLeavingViewport()
 		{
 			if (CartesianChart == null)
@@ -1103,7 +1115,6 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		{
 			if (CartesianChart != null && (CartesianChart is IChart chart))
 			{
-				// Sauvegarde du ratio vertical avant toute mutation (clipRect absolu)
 				var clip = chart.ActualSeriesClipRect;
 				if (clip.Height > 0)
 				{
@@ -1119,9 +1130,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				var xAxes = CartesianChart._chartArea?._xAxes;
 
 				if (xAxes == null || xAxes.Count == 0)
-				{
 					return;
-				}
 
 				foreach (ChartAxis chartAxis in xAxes)
 				{
@@ -1133,13 +1142,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 							if (nearestDataPoints.Count > 0)
 							{
 								if (series.IsSideBySide)
-								{
 									_isAnySideBySideSeries = true;
-								}
 								else
-								{
 									_isAnyContinuesSeries = true;
-								}
 
 								series.GenerateTrackballPointInfo(nearestDataPoints, PointInfos, ref _isAnySideBySideSeries);
 							}
@@ -1149,13 +1154,13 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 				UpdateTrackballPointInfos(pointX - (float)chart.ActualSeriesClipRect.Left, pointY - (float)chart.ActualSeriesClipRect.Top);
 
-				if (!_isLocked && PointInfos.Count > 0)
+				// Ancien lock immédiat supprimé.
+				// On ne verrouille que si le geste est terminé (IsPressed == false & LongPressActive == false)
+				if (!_isLocked && PointInfos.Count > 0 && !IsPressed && !LongPressActive)
 				{
-					_lockedAxis = PointInfos[0].Series.ActualXAxis;
-					_lockedXValue = PointInfos[0].XValue;
-					_isLockedOutside = false;
-					_isLocked = true;
+					LockCurrentPosition(); // <--- AJOUT
 				}
+
 				Invalidate();
 			}
 		}
@@ -1537,7 +1542,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			double tempYValue = info.Y;
 			double intersectedGroupLabelsCount = intersectedGroupLabels.Count;
 			double halfHeight = ((infoTooltipRect.Height * intersectedGroupLabelsCount)
-								+ _trackLabelSpacing * (intersectedGroupLabelsCount - 1)) / 2 - infoTooltipRect.Height / 2;
+							+ _trackLabelSpacing * (intersectedGroupLabelsCount - 1)) / 2 - infoTooltipRect.Height / 2;
 			if (info.Y - halfHeight <= 0)
 			{
 				tempYValue = tempYValue + halfHeight - info.Y + _trackLabelSpacing;
@@ -1781,8 +1786,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 
 			double startXValue = isTransposed
-								 ? SeriesBounds.Top
-								 : SeriesBounds.Left;
+							 ? SeriesBounds.Top
+							 : SeriesBounds.Left;
 
 			double nearPointX = startXValue;
 
@@ -2041,7 +2046,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					if (pointInfo.HaveTemplateView && CartesianChart is SfCartesianChart chart)
 					{
 						TrackballPointInfo? prevTrackballInfo = PreviousPointInfos.Find(previousPointInfo =>
-														previousPointInfo.DataItem == pointInfo.DataItem && previousPointInfo.Series == pointInfo.Series);
+											previousPointInfo.DataItem == pointInfo.DataItem && previousPointInfo.Series == pointInfo.Series);
 
 						var trackballView = GetOrCreateTrackballView(chart, prevTrackballInfo);
 
@@ -2275,6 +2280,67 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 		}
 
+		void DrawHorizontalTrackballLine(ICanvas canvas)
+		{
+			if (!ShowLine || CartesianChart == null)
+				return;
+
+			var style = LineStyle;
+			if (style == null)
+				return;
+
+			var clip = (CartesianChart as IChart)?.ActualSeriesClipRect ?? SeriesBounds;
+			float y;
+
+			if (_isLocked)
+			{
+				// Reprojection dynamique tant qu’on a la valeur data.
+				if (_lockedYAxis != null && !double.IsNaN(_lockedYDataValue))
+				{
+					y = (float)_lockedYAxis.ValueToPoint(_lockedYDataValue) + (float)clip.Top;
+				}
+				else if (!double.IsNaN(_lockedYValue))
+				{
+					// _lockedYValue est stocké relatif à SeriesBounds.Top
+					y = (float)_lockedYValue + (float)SeriesBounds.Top;
+				}
+				else
+				{
+					// Rien à afficher si aucune référence Y
+					return;
+				}
+			}
+			else
+			{
+				// Mode interactif (avant verrouillage)
+				if (PointInfos != null && PointInfos.Count > 0)
+				{
+					y = (float)PointInfos[0].Y + (float)SeriesBounds.Top;
+				}
+				else if (_hasLastPointerY)
+				{
+					y = (float)(clip.Top + (_lastPointerRelativeY * clip.Height));
+				}
+				else
+				{
+					return;
+				}
+			}
+
+			// Clamp dans la zone verticale visible (même si X est dehors)
+			if (y < clip.Top)
+				y = (float)clip.Top;
+			if (y > clip.Bottom)
+				y = (float)clip.Bottom;
+
+			if (style.StrokeDashArray != null)
+				canvas.StrokeDashPattern = style.StrokeDashArray.ToFloatArray();
+
+			canvas.StrokeColor = style.Stroke.ToColor();
+			canvas.StrokeSize = (float)style.StrokeWidth;
+			canvas.DrawLine((float)clip.Left, y, (float)clip.Right, y);
+		}
+
 		static void OnLabelStyleChanged(BindableObject bindable, object oldValue, object newValue)
 		{
 			if (bindable is ChartTrackballBehavior behavior)
@@ -2327,6 +2393,25 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		#endregion
 
 		#endregion
+
+		void LockCurrentPosition()
+		{
+			if (_isLocked)
+				return;
+			if (PointInfos == null || PointInfos.Count == 0)
+				return;
+
+			var anchor = PointInfos[0];
+			_lockedXAxis = anchor.Series.ActualXAxis;
+			_lockedYAxis = anchor.Series.ActualYAxis;
+			_lockedXValue = anchor.XValue;
+			_lockedYValue = anchor.Y; // fallback pixel
+			_lockedYDataValue = (anchor.YValues != null && anchor.YValues.Count > 0) ? anchor.YValues[0] : double.NaN;
+
+			_isLockedOutside = false;
+			_isLocked = true;
+			Invalidate();
+		}
 	}
 
 	/// <summary>
@@ -2460,5 +2545,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		}
 
 		#endregion
+
+
 	}
 }
