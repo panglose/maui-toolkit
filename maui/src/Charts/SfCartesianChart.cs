@@ -1177,6 +1177,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			_zoomPanView ??= [];
 
 			UpdateView();
+
+			SizeChanged += OnSizeChanged;
 		}
 
 		internal override AreaBase CreateChartArea()
@@ -1375,6 +1377,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		/// <inheritdoc/>
 		void IPanGestureListener.OnPan(PanEventArgs e)
 		{
+			if (IsTrackballExclusiveActive())
+				return;
+
 			if (e.Status == GestureStatus.Running)
 			{
 				OnPanStateChanged(e.TouchPoint, e.TranslatePoint);
@@ -1514,6 +1519,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 #if WINDOWS || MACCATALYST
 			HideTooltipView();
 #endif
+			if (IsTrackballExclusiveActive())
+				return;
+
 
 			TrackballBehavior?.RefreshLockedTrackball();
 
@@ -1729,6 +1737,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			if (bindable is SfCartesianChart chart)
 			{
 				chart._chartArea.IsTransposed = (bool)newValue;
+
+				chart.TrackballBehavior?.RefreshLockedTrackball();
 			}
 		}
 
@@ -2018,6 +2028,33 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		#endregion
 
+		private bool IsTrackballExclusiveActive()
+		{
+			var tb = TrackballBehavior;
+			if (tb == null)
+				return false;
+			if (tb.ActivationMode != ChartTrackballActivationMode.LongPress)
+				return false;
+			if (!tb.LongPressActive)
+				return false;
+			// Ne pas bloquer si un rectangle de sélection (selection zoom) est en cours.
+			if (ZoomPanBehavior is ChartZoomPanBehavior z && z.IsSelectionZoomingActivated)
+				return false;
+			return true;
+		}
 
+		private void OnSizeChanged(object? sender, EventArgs e)
+		{
+			// Si position verrouillée (trackball statique), on tente de recalculer.
+			if (TrackballBehavior?.IsLocked == true)
+			{
+				TrackballBehavior.RefreshLockedTrackball();
+				// Deuxième passage après le frame suivant (axes réellement recalculés)
+				Dispatcher?.Dispatch(() =>
+				{
+					TrackballBehavior?.RefreshLockedTrackball();
+				});
+			}
+		}
 	}
 }

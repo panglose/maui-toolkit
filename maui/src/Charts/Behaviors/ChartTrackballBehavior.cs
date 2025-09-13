@@ -932,6 +932,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					_lockedXValue = double.NaN;
 					_isLockedOutside = false;
 					Show(pointX, pointY);
+
+					if (HapticFeedback.Default?.IsSupported == true)
+					{
+						HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
+					}
 				}
 			}
 		}
@@ -2157,7 +2162,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 #elif ANDROID || IOS
 			return ChartTrackballActivationMode.None;
 #else
-			return ChartTrackballActivationMode.TouchMove;
+			return ChartTrackballActivationMode.LongPress;
 #endif
 		}
 
