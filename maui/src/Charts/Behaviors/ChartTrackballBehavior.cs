@@ -37,6 +37,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		#region Fields
 		float _lastPointerRelativeY = 0.5f;
 		bool _hasLastPointerY;
+		bool _hapticFired;
 
 		bool _isAnySideBySideSeries;
 		bool _isAnyContinuesSeries;
@@ -884,7 +885,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 
 			LongPressActive = false;
-			// Do not hide automatically.
+
+			_hapticFired = false;
 		}
 
 		/// <inheritdoc/>
@@ -931,12 +933,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					_lockedAxis = null;
 					_lockedXValue = double.NaN;
 					_isLockedOutside = false;
-					Show(pointX, pointY);
 
-					if (HapticFeedback.Default?.IsSupported == true)
+					if (!_hapticFired && HapticFeedback.Default.IsSupported)
 					{
 						HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
+
+						_hapticFired = true;
 					}
+
+					Show(pointX, pointY);
 				}
 			}
 		}
@@ -944,7 +949,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal override void OnTouchCancel(float x, float y)
 		{
 			LongPressActive = false;
-			// no auto hide
+
+			_hapticFired = false;
 		}
 
 		internal override void OnTouchExit()
