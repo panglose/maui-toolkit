@@ -44,6 +44,28 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		bool _zoomCancel;
 		bool _isDoubleTapped;
 
+		// ---------------- Inertie (from scratch) ----------------
+		IDispatcherTimer? _inertiaTimer;
+		bool _inertiaRunning;
+		bool _panActive;
+
+		// Samples (fenêtre glissante)
+		readonly Queue<(double t, double x)> _samples = new();
+		Point _lastFingerPoint;
+		bool _hasLastPoint;
+
+		// Vitesse calculée
+		double _initialVelocity;
+
+		// Paramètres (ajuste selon ressenti)
+		const double VelocityWindowSeconds = 0.12;   // 100 ms
+		const double MinVelocityStart = 40.0;        // px/s : sous ce seuil => pas d’inertie
+		const double MinVelocityStop = 10.0;         // px/s : arrêt
+		const double Deceleration = 500;          // px/s² (1200–1700 selon distance désirée)
+		const int InertiaFrameMs = 16;               // 60 fps
+		const double NoiseDx = 0.35;                 // ignore micro-mouvements
+													 // --------------------------------------------------------
+
 #if MACCATALYST || IOS
 		bool _isScrollChanged;
 		bool _isSelected;
@@ -1068,6 +1090,10 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			//évite toute dérive verticale
 			translatePoint = new Point(translatePoint.X, 0);
 
+			// Si inertie en cours et l’utilisateur reprend le contrôle : stop
+			if (_inertiaRunning)
+				StopInertia();
+
 			var clipRect = chart.ActualSeriesClipRect;
 #if MACCATALYST || IOS
 			_isScrollChanged = true;
@@ -1075,6 +1101,9 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			if (chart is SfCartesianChart cartesianChart)
 			{
 				cartesianChart.IsHandled = TouchHandled(cartesianChart, translatePoint);
+				_panActive = true;
+
+				CaptureVelocitySample(touchPoint);
 
 				if (!IsSelectionZoomingActivated && clipRect.Contains(touchPoint))
 				{
@@ -1145,6 +1174,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal void OnPinchStateChanged(IChart chart, GestureStatus action, Point location, double angle, float scale)
 		{
+			StopInertiaIfRunning();
+
 			var clipRect = chart.ActualSeriesClipRect;
 			_pinchStatus = action;
 
@@ -1168,6 +1199,13 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		/// <inheritdoc/>
 		protected internal override void OnTouchUp(ChartBase chart, float pointX, float pointY)
 		{
+			_panActive = false;
+			// Lancer inertie ici si le pan se termine (ou mieux : depuis le chart quand GestureStatus == Completed)
+			if (chart is SfCartesianChart c)
+			{
+				TryStartInertia(c);
+			}
+
 #if WINDOWS || ANDROID
 			_isDoubleTapped = false;
 #endif
@@ -1207,6 +1245,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal override void OnTouchDown(float pointX, float pointY)
 		{
+			StopInertiaIfRunning();
+			ResetVelocityTracking();
 			base.OnTouchDown(pointX, pointY);
 #if MACCATALYST || IOS
 			_downEntered++;
@@ -1358,6 +1398,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		void OnDoubleTap(CartesianChartArea area, Rect clipRect, float pointX, float pointY)
 		{
+			StopInertiaIfRunning();
+
 #if !MACCATALYST && !IOS
 			if (EnableSelectionZooming && !_isSelectionZoomingEnded && Chart != null)
 			{
@@ -1756,6 +1798,159 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		}
 
 		#endregion
+
+		#endregion
+
+		#region Inertia Core
+
+		void CaptureVelocitySample(Point touchPoint)
+		{
+			var now = DateTime.UtcNow;
+			double t = now.Ticks / (double)TimeSpan.TicksPerSecond;
+
+			if (!_hasLastPoint)
+			{
+				_lastFingerPoint = touchPoint;
+				_hasLastPoint = true;
+				_samples.Enqueue((t, touchPoint.X));
+				return;
+			}
+
+			double dx = touchPoint.X - _lastFingerPoint.X;
+			_lastFingerPoint = touchPoint;
+
+			if (Math.Abs(dx) < NoiseDx)
+			{
+				// On avance quand même le temps : ajoute un sample neutre
+				_samples.Enqueue((t, _samples.Last().x));
+			}
+			else
+			{
+				_samples.Enqueue((t, _samples.Last().x + dx));
+			}
+
+			// Fenêtre glissante
+			while (_samples.Count > 1 && (t - _samples.Peek().t) > VelocityWindowSeconds)
+				_samples.Dequeue();
+		}
+
+		double ComputeInitialVelocity()
+		{
+			if (_samples.Count < 2)
+				return 0;
+
+			var first = _samples.Peek();
+			var last = _samples.Last();
+			double dt = last.t - first.t;
+			if (dt <= 0)
+				return 0;
+			double dx = last.x - first.x;
+			return dx / dt; // px/s
+		}
+
+		internal void TryStartInertia(SfCartesianChart chart)
+		{
+			if (_isPinchZoomingActivated || IsSelectionZoomingActivated)
+			{
+				ResetVelocityTracking();
+				return;
+			}
+
+			_initialVelocity = ComputeInitialVelocity();
+			if (Math.Abs(_initialVelocity) < MinVelocityStart)
+			{
+				ResetVelocityTracking();
+				return;
+			}
+
+			StartInertia(chart, _initialVelocity);
+		}
+
+		void StartInertia(SfCartesianChart chart, double v0)
+		{
+			_inertiaRunning = true;
+			double v = v0;
+
+			_inertiaTimer = Application.Current?.Dispatcher.CreateTimer();
+			if (_inertiaTimer == null)
+			{
+				_inertiaRunning = false;
+				return;
+			}
+
+			_inertiaTimer.Interval = TimeSpan.FromMilliseconds(InertiaFrameMs);
+			_inertiaTimer.Tick += (s, e) =>
+			{
+				if (!_inertiaRunning || chart == null)
+				{
+					StopInertia();
+					return;
+				}
+
+				if (_panActive) // L’utilisateur retouche
+				{
+					StopInertia();
+					return;
+				}
+
+				double dt = InertiaFrameMs / 1000.0;
+				if (Math.Abs(v) <= MinVelocityStop)
+				{
+					StopInertia();
+					return;
+				}
+
+				double dx = v * dt;
+
+				var clipRect = ((IChart)chart).ActualSeriesClipRect;
+				var before = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
+				PanTranslate(chart, clipRect, new Point(dx, 0));
+				var after = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
+
+				// Bord atteint (aucune variation)
+				if (Math.Abs(after - before) < 1e-7)
+				{
+					StopInertia();
+					return;
+				}
+
+				// Décélération linéaire
+				double dv = Deceleration * dt;
+				if (Math.Abs(v) <= dv)
+				{
+					StopInertia();
+					return;
+				}
+				v -= dv * Math.Sign(v);
+			};
+
+			_inertiaTimer.Start();
+			ResetVelocityTracking(); // On n’a plus besoin des samples
+		}
+
+		void StopInertiaIfRunning()
+		{
+			if (_inertiaRunning)
+				StopInertia();
+		}
+
+		void StopInertia()
+		{
+			if (_inertiaTimer != null)
+			{
+				_inertiaTimer.Stop();
+				_inertiaTimer = null;
+			}
+			_inertiaRunning = false;
+			ResetVelocityTracking();
+		}
+
+		void ResetVelocityTracking()
+		{
+			_samples.Clear();
+			_hasLastPoint = false;
+			_initialVelocity = 0;
+		}
 
 		#endregion
 	}

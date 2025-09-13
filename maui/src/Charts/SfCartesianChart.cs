@@ -1539,6 +1539,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			{
 				axis.IsScrolling = false;
 			}
+
+			ZoomPanBehavior?.TryStartInertia(this);
 		}
 
 		internal void OnTapAction(IChart chart, Point tapPoint, int tapCount)
