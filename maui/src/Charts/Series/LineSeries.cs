@@ -406,35 +406,38 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal override void GenerateSegments(SeriesView seriesView)
 		{
 			var xValues = GetXValues();
-
 			if (xValues == null)
+				return;
+
+			// Supprimer segments en trop si le nombre de points a diminué.
+			int needed = PointsCount > 1 ? PointsCount - 1 : 0;
+			if (_segments.Count > needed)
+			{
+				for (int i = _segments.Count - 1; i >= needed; i--)
+					_segments.RemoveAt(i);
+			}
+
+			// 0 ou 1 point: aucun segment à tracer.
+			if (PointsCount <= 1)
 			{
 				return;
 			}
 
-			if (PointsCount == 1)
+			// Créer / mettre à jour exactement PointsCount - 1 segments.
+			for (int i = 0; i < PointsCount - 1; i++)
 			{
-				CreateSegment(seriesView, [xValues[0], YValues[0], double.NaN, double.NaN], 0);
-			}
-			else
-			{
-				for (int i = 0; i < PointsCount; i++)
+				double x1 = xValues[i];
+				double y1 = YValues[i];
+				double x2 = xValues[i + 1];
+				double y2 = YValues[i + 1];
+
+				if (i < _segments.Count && _segments[i] is LineSegment seg)
 				{
-					if (i < _segments.Count)
-					{
-						_segments[i].SetData([xValues[i], YValues[i], xValues[i + 1], YValues[i + 1]]);
-					}
-					else
-					{
-						if (i == PointsCount - 1)
-						{
-							CreateSegment(seriesView, [xValues[i], YValues[i], double.NaN, double.NaN], i);
-						}
-						else
-						{
-							CreateSegment(seriesView, [xValues[i], YValues[i], xValues[i + 1], YValues[i + 1]], i);
-						}
-					}
+					seg.SetData(new[] { x1, y1, x2, y2 });
+				}
+				else
+				{
+					CreateSegment(seriesView, new[] { x1, y1, x2, y2 }, i);
 				}
 			}
 		}

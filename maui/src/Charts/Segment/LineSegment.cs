@@ -96,6 +96,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				}
 			}
 
+			// Garde minimale anti-NaN / Infinity
+			if (float.IsNaN(x1) || float.IsNaN(y1) || float.IsNaN(x2) || float.IsNaN(y2) ||
+				float.IsInfinity(x1) || float.IsInfinity(y1) || float.IsInfinity(x2) || float.IsInfinity(y2))
+				return;
+
 			canvas.StrokeSize = (float)StrokeWidth;
 			canvas.StrokeColor = Fill.ToColor();
 			canvas.Alpha = Opacity;
