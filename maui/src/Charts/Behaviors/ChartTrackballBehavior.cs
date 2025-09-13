@@ -35,6 +35,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 	public partial class ChartTrackballBehavior : ChartBehavior, IMarkerDependent, IThemeElement
 	{
 		#region Fields
+		float _lastPointerRelativeY = 0.5f;
+		bool _hasLastPointerY;
 
 		bool _isAnySideBySideSeries;
 		bool _isAnyContinuesSeries;
@@ -979,7 +981,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 		}
 
-		public void RefreshLockedTrackball()
+		internal void RefreshLockedTrackball()
 		{
 			if (!_isLocked || CartesianChart == null)
 			{
@@ -997,8 +999,13 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			}
 
 			var clip = chart.ActualSeriesClipRect;
+			if (clip.Height <= 0 || clip.Width <= 0)
+			{
+				// Layout pas prêt, on attendra le prochain appel (après délai).
+				return;
+			}
+
 			float px = (float)_lockedAxis.ValueToPoint(_lockedXValue) + (float)clip.Left;
-			float py = (float)(clip.Top + clip.Height / 2); // arbitrary vertical center
 
 			bool inside = px >= clip.Left && px <= clip.Right;
 
@@ -1012,15 +1019,25 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				return;
 			}
 
-			// Back inside viewport -> regenerate trackball visuals.
 			if (_isLockedOutside)
 			{
 				_isLockedOutside = false;
 			}
 
-			_isLocked = false; // temporarily unlock for regeneration
+			// Reconstitution du Y d’origine (ratio sur la hauteur du clip)
+			float py;
+			if (_hasLastPointerY)
+			{
+				py = (float)(clip.Top + (_lastPointerRelativeY * clip.Height));
+			}
+			else
+			{
+				py = (float)(clip.Top + clip.Height / 2f);
+			}
+
+			_isLocked = false;
 			Show(px, py);
-			_isLocked = true; // lock again
+			_isLocked = true;
 		}
 
 		// Ajoute cette méthode (placer dans la région Private Methods, avant GenerateTrackball par exemple).
@@ -1075,6 +1092,15 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		{
 			if (CartesianChart != null && (CartesianChart is IChart chart))
 			{
+				// Sauvegarde du ratio vertical avant toute mutation (clipRect absolu)
+				var clip = chart.ActualSeriesClipRect;
+				if (clip.Height > 0)
+				{
+					_lastPointerRelativeY = (float)((pointY - clip.Top) / clip.Height);
+					_lastPointerRelativeY = Math.Clamp(_lastPointerRelativeY, 0f, 1f);
+					_hasLastPointerY = true;
+				}
+
 				PreviousPointInfos = new List<TrackballPointInfo>(PointInfos);
 				PointInfos.Clear();
 				_isAnySideBySideSeries = false;
@@ -1111,7 +1137,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				}
 
 				UpdateTrackballPointInfos(pointX - (float)chart.ActualSeriesClipRect.Left, pointY - (float)chart.ActualSeriesClipRect.Top);
-				// Lock after first successful generation if not already locked.
+
 				if (!_isLocked && PointInfos.Count > 0)
 				{
 					_lockedAxis = PointInfos[0].Series.ActualXAxis;

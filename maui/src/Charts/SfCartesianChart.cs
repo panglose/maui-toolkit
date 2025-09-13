@@ -2017,5 +2017,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		#endregion
 
 		#endregion
+
+
 	}
 }

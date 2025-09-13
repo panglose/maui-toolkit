@@ -1,6 +1,6 @@
-﻿using Syncfusion.Maui.Toolkit.Graphics.Internals;
+﻿using System.Collections.ObjectModel;
+using Syncfusion.Maui.Toolkit.Graphics.Internals;
 using Syncfusion.Maui.Toolkit.Internals;
-using System.Collections.ObjectModel;
 
 namespace Syncfusion.Maui.Toolkit.Charts
 {
@@ -124,33 +124,41 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				return;
 			}
 
-			//Hide tooltip if any update happen in chart area.
+			// Masquer tooltip si mise à jour.
 			cartesianChart.ResetTooltip();
 
+			// 1. Axes
 			_axisLayout.AssignAxisToSeries();
 			_axisLayout.LayoutAxis(AreaBounds);
 
 			_cartesianPlotArea.Margin = PlotAreaMargin;
 			_behaviorLayout.Margin = PlotAreaMargin;
 
-			//Size and position of the plot area, subtracting title and legend size.
+			// 2. ClipRect série
 			cartesianChart.ActualSeriesClipRect = ChartUtils.GetSeriesClipRect(
 				AreaBounds.SubtractThickness(PlotAreaMargin),
 				_cartesianPlotArea._chart.TitleHeight);
 
-			//Need to set the trackballview padding to display the trackball template exact position
 			if (cartesianChart is SfCartesianChart chart)
 				chart._trackballView.Padding = PlotAreaMargin;
 
-			UpdateVisibleSeries(); //series create segment logics.
+			// 3. Séries (segments / valeurs finales)
+			UpdateVisibleSeries();
 
+			// 4. Annotations (reposées sur les valeurs finales)
 			if (cartesianChart is SfCartesianChart sfChart)
-			{
-				//Casting required as annotation only support for cartesian chart. 
 				sfChart.UpdateAnnotationLayout();
+
+			// 5. (NOUVEAU) Rafraîchir le trackball après que tout soit stable
+			if (cartesianChart is SfCartesianChart hostChart &&
+				hostChart.TrackballBehavior is { IsLocked: true } behavior &&
+				_actualSeriesClipRect.Width > 0 && _actualSeriesClipRect.Height > 0)
+			{
+				// Appel direct maintenant que les transforms axes + clip sont définitifs
+				behavior.RefreshLockedTrackball();
 			}
 
-			//Invalidate views.
+			// 6. Invalidations
 			_annotationLayout.InvalidateDrawable();
 			_axisLayout.InvalidateRender();
 			_cartesianPlotArea.InvalidateRender();
