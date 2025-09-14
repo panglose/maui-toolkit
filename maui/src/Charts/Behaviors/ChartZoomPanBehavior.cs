@@ -1087,8 +1087,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal virtual void OnScrollChanged(IChart chart, Point touchPoint, Point translatePoint)
 		{
-			//évite toute dérive verticale
-			translatePoint = new Point(translatePoint.X, 0);
+			translatePoint = EliminerDerive(translatePoint);
 
 			// Si inertie en cours et l’utilisateur reprend le contrôle : stop
 			if (_inertiaRunning)
@@ -1110,6 +1109,20 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					PanTranslate(cartesianChart, clipRect, translatePoint);
 				}
 			}
+		}
+
+		private Point EliminerDerive(Point translatePoint)
+		{
+			if (ZoomMode == ZoomMode.X)
+			{
+				translatePoint = new Point(translatePoint.X, 0);
+			}
+			else if (ZoomMode == ZoomMode.Y)
+			{
+				translatePoint = new Point(0, translatePoint.Y);
+			}
+
+			return translatePoint;
 		}
 
 		/// <inheritdoc/>
@@ -1901,6 +1914,10 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				}
 
 				double dx = v * dt;
+
+#if ANDROID
+				dx = -dx;
+#endif
 
 				var clipRect = ((IChart)chart).ActualSeriesClipRect;
 				var before = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
