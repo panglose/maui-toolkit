@@ -409,6 +409,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		IParentThemeElement
 	{
 		#region Fields
+		bool _skipTrackballOnNextTouchUp;
 		internal readonly CartesianChartArea _chartArea;
 		internal readonly ChartTrackballView _trackballView;
 		internal readonly ChartZoomPanView _zoomPanView;
@@ -1464,8 +1465,16 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		{
 			InteractiveBehavior?.OnTouchDown(this, (float)point.X, (float)point.Y);
 
+			bool inertiaCancelled = false;
 			if (ZoomPanBehavior != null)
 			{
+				// Si inertie en cours → on la stoppe et on marque pour skipper le trackball sur ce cycle.
+				if (ZoomPanBehavior.IsInertiaRunning && ZoomPanBehavior.CancelInertia())
+				{
+					inertiaCancelled = true;
+					_skipTrackballOnNextTouchUp = true;
+				}
+
 				ZoomPanBehavior.SetTouchHandled(this);
 				ZoomPanBehavior.OnTouchDown((float)point.X, (float)point.Y);
 			}
@@ -1477,7 +1486,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				tooltipBehavior.OnTouchDown(this, (float)point.X, (float)point.Y);
 			}
 
-			if (TrackballBehavior != null)
+			// Ne pas réinitialiser le lock du trackball si on ne fait que stopper l’inertie.
+			if (!inertiaCancelled && TrackballBehavior != null)
 			{
 				TrackballBehavior.DeviceType = deviceType;
 				TrackballBehavior.OnTouchDown(this, (float)point.X, (float)point.Y);
@@ -1487,11 +1497,36 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal void OnTouchUp(IChart chart, long pointerId, Point point)
 		{
 #if MONOANDROID || WINDOWS
-			IsHandled = false;
+        IsHandled = false;
 #endif
+			if (_skipTrackballOnNextTouchUp)
+			{
+				// Pas de ShowAndLock ni relance d'inertie.
+				_skipTrackballOnNextTouchUp = false;
+
+				// Assurer l'état axes (équivalent à fin de pan sans inertie).
+				foreach (var axis in XAxes)
+					axis.IsScrolling = false;
+				foreach (var axis in YAxes)
+					axis.IsScrolling = false;
+
+				InteractiveBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+				ZoomPanBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+
+				var tooltipBehavior = chart.ActualTooltipBehavior;
+#if ANDROID || IOS
+            tooltipBehavior?.OnTouchUp((float)point.X, (float)point.Y);
+#else
+				tooltipBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+#endif
+				// On laisse passer OnTouchUp du trackball (il ne bougera rien si déjà verrouillé).
+				TrackballBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+				return;
+			}
+
 			bool hadPan = ZoomPanBehavior?.PanActive == true;
 
-			// Lancer d’abord la fin de pan (peut démarrer l’inertie)
+			// Fin de pan normale (peut démarrer inertie).
 			OnPanEnded();
 			bool inertiaRunning = ZoomPanBehavior?.IsInertiaRunning == true;
 
@@ -1504,12 +1539,11 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			InteractiveBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 			ZoomPanBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 
-			var tooltipBehavior = chart.ActualTooltipBehavior;
-			//Updating the the TouchUp method from OnSingleTap method for custom tooltip behavior 
+			var tb = chart.ActualTooltipBehavior;
 #if ANDROID || IOS
-            tooltipBehavior?.OnTouchUp((float)point.X, (float)point.Y);
+        tb?.OnTouchUp((float)point.X, (float)point.Y);
 #else
-			tooltipBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+			tb?.OnTouchUp(this, (float)point.X, (float)point.Y);
 #endif
 			TrackballBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 		}

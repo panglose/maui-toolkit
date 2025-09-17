@@ -1976,6 +1976,16 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			_initialVelocity = 0;
 		}
 
+		//permet au chart d'annuler proprement l'inertie sans déclencher la logique de tap.
+		internal bool CancelInertia()
+		{
+			if (_inertiaRunning)
+			{
+				StopInertia();
+				return true;
+			}
+			return false;
+		}
 		#endregion
 	}
 }
