@@ -85,7 +85,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal SfCartesianChart? Chart { get; set; }
 		internal bool IsSelectionZoomingActivated { get; set; }
 		internal Rect SelectionRect { get; set; }
-
+		internal bool IsInertiaRunning => _inertiaRunning;
+		internal bool PanActive => _panActive;
 		#endregion
 
 		#region Bindable Properties
@@ -1212,6 +1213,12 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		/// <inheritdoc/>
 		protected internal override void OnTouchUp(ChartBase chart, float pointX, float pointY)
 		{
+			// Dernier sample pour ne pas perdre la vitesse finale si le doigt a fait un saut court.
+			if (_panActive)
+			{
+				CaptureVelocitySample(new Point(pointX, pointY));
+			}
+
 			_panActive = false;
 			// Lancer inertie ici si le pan se termine (ou mieux : depuis le chart quand GestureStatus == Completed)
 			if (chart is SfCartesianChart c)

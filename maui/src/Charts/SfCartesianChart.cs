@@ -1489,10 +1489,19 @@ namespace Syncfusion.Maui.Toolkit.Charts
 #if MONOANDROID || WINDOWS
 			IsHandled = false;
 #endif
+			bool hadPan = ZoomPanBehavior?.PanActive == true;
 
+			// Lancer d’abord la fin de pan (peut démarrer l’inertie)
 			OnPanEnded();
-			InteractiveBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+			bool inertiaRunning = ZoomPanBehavior?.IsInertiaRunning == true;
 
+			if (!hadPan && !inertiaRunning &&
+				!(ZoomPanBehavior is ChartZoomPanBehavior z && z.IsSelectionZoomingActivated))
+			{
+				TrackballBehavior?.ShowAndLock((float)point.X, (float)point.Y);
+			}
+
+			InteractiveBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 			ZoomPanBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 
 			var tooltipBehavior = chart.ActualTooltipBehavior;

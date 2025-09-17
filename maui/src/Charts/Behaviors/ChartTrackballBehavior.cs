@@ -938,12 +938,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				{
 					IsPressed = true; // <--- élargi à toutes plateformes pour cohérence
 					LongPressActive = true;
-					_isLocked = false;
-					_lockedXAxis = null;
-					_lockedYAxis = null;          // <--- AJOUT
-					_lockedYDataValue = double.NaN; // <--- AJOUT
-					_lockedXValue = double.NaN;
-					_isLockedOutside = false;
+					ResetLock();
 
 					if (!_hapticFired && HapticFeedback.Default.IsSupported)
 					{
@@ -954,6 +949,25 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					Show(pointX, pointY); // suit le doigt pendant le long press
 				}
 			}
+		}
+
+		private void ResetLock()
+		{
+			_isLocked = false;
+			_lockedXAxis = null;
+			_lockedYAxis = null;          // <--- AJOUT
+			_lockedYDataValue = double.NaN; // <--- AJOUT
+			_lockedXValue = double.NaN;
+			_isLockedOutside = false;
+		}
+
+		internal void ShowAndLock(float pointX, float pointY)
+		{
+			ResetLock();
+
+			Show(pointX, pointY);
+
+			LockCurrentPosition();
 		}
 
 		internal override void OnTouchCancel(float x, float y)
