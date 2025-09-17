@@ -1039,8 +1039,29 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			if (clip.Height <= 0 || clip.Width <= 0)
 				return;
 
+			// Projection X verrouillée -> pixel absolu
 			float px = (float)_lockedXAxis.ValueToPoint(_lockedXValue) + (float)clip.Left;
-			bool inside = px >= clip.Left && px <= clip.Right;
+
+			// Calcul Y (data -> pixel si possible, sinon fallback)
+			float py;
+			if (_lockedYAxis != null && !double.IsNaN(_lockedYDataValue))
+			{
+				py = (float)_lockedYAxis.ValueToPoint(_lockedYDataValue) + (float)clip.Top;
+			}
+			else
+			{
+				if (!double.IsNaN(_lockedYValue))
+					py = (float)_lockedYValue; // déjà absolu (stocké au lock)
+				else if (_hasLastPointerY)
+					py = (float)(clip.Top + (_lastPointerRelativeY * clip.Height));
+				else
+					py = (float)(clip.Top + clip.Height / 2f);
+			}
+
+			// Vérification sur les deux axes (bug: auparavant uniquement X)
+			bool insideX = px >= clip.Left && px <= clip.Right;
+			bool insideY = py >= clip.Top && py <= clip.Bottom;
+			bool inside = insideX && insideY;
 
 			if (!inside)
 			{
@@ -1049,29 +1070,14 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					_isLockedOutside = true;
 					ClearLockedVisualsLeavingViewport();
 				}
+
 				Invalidate();
+
 				return;
 			}
 
 			if (_isLockedOutside)
 				_isLockedOutside = false;
-
-			float py;
-			if (_lockedYAxis != null && !double.IsNaN(_lockedYDataValue))
-			{
-				// Reprojection data -> pixel
-				py = (float)_lockedYAxis.ValueToPoint(_lockedYDataValue) + (float)clip.Top;
-			}
-			else
-			{
-				// Fallback : pixel verrouillé, sinon ratio
-				if (!double.IsNaN(_lockedYValue))
-					py = (float)_lockedYValue;
-				else if (_hasLastPointerY)
-					py = (float)(clip.Top + (_lastPointerRelativeY * clip.Height));
-				else
-					py = (float)(clip.Top + clip.Height / 2f);
-			}
 
 			_isLocked = false;
 			Show(px, py);

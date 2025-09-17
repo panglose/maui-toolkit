@@ -410,6 +410,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 	{
 		#region Fields
 		bool _skipTrackballOnNextTouchUp;
+		bool _pinchWasMade;
 		internal readonly CartesianChartArea _chartArea;
 		internal readonly ChartTrackballView _trackballView;
 		internal readonly ChartZoomPanView _zoomPanView;
@@ -1463,6 +1464,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal void OnTouchDown(IChart chart, long pointerId, Point point, PointerDeviceType deviceType)
 		{
+			_pinchWasMade = false;
+
 			InteractiveBehavior?.OnTouchDown(this, (float)point.X, (float)point.Y);
 
 			bool inertiaCancelled = false;
@@ -1519,8 +1522,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 #else
 				tooltipBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 #endif
-				// On laisse passer OnTouchUp du trackball (il ne bougera rien si déjà verrouillé).
-				TrackballBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
+				if (_pinchWasMade == false)
+					TrackballBehavior?.OnTouchUp(this, (float)point.X, (float)point.Y);
 				return;
 			}
 
@@ -1530,7 +1533,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			OnPanEnded();
 			bool inertiaRunning = ZoomPanBehavior?.IsInertiaRunning == true;
 
-			if (!hadPan && !inertiaRunning &&
+			if (!hadPan && !inertiaRunning && !_pinchWasMade &&
 				!(ZoomPanBehavior is ChartZoomPanBehavior z && z.IsSelectionZoomingActivated))
 			{
 				TrackballBehavior?.ShowAndLock((float)point.X, (float)point.Y);
@@ -1555,6 +1558,8 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			TrackballBehavior?.RefreshLockedTrackball();
 
 			ZoomPanBehavior?.OnPinchStateChanged(this, action, location, angle, scale);
+
+			_pinchWasMade = true;
 		}
 
 		internal void OnPanStateChanged(Point touchPoint, Point translatePoint)

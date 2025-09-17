@@ -49,22 +49,24 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		bool _inertiaRunning;
 		bool _panActive;
 
-		// Samples (fenêtre glissante)
-		readonly Queue<(double t, double x)> _samples = new();
+		// Samples (fenêtre glissante) - étendu X & Y
+		readonly Queue<(double t, double x, double y)> _samples = new();
 		Point _lastFingerPoint;
 		bool _hasLastPoint;
 
-		// Vitesse calculée
-		double _initialVelocity;
+		// Vitesses calculées (séparées)
+		double _initialVelocityX;
+		double _initialVelocityY;
 
-		// Paramètres (ajuste selon ressenti)
-		const double VelocityWindowSeconds = 0.12;   // 100 ms
-		const double MinVelocityStart = 40.0;        // px/s : sous ce seuil => pas d’inertie
-		const double MinVelocityStop = 10.0;         // px/s : arrêt
-		const double Deceleration = 500;          // px/s² (1200–1700 selon distance désirée)
-		const int InertiaFrameMs = 16;               // 60 fps
-		const double NoiseDx = 0.35;                 // ignore micro-mouvements
-													 // --------------------------------------------------------
+		// Paramètres
+		const double VelocityWindowSeconds = 0.12;
+		const double MinVelocityStart = 40.0;
+		const double MinVelocityStop = 10.0;
+		const double Deceleration = 500;
+		const int InertiaFrameMs = 16;
+		const double NoiseDx = 0.35;
+		const double NoiseDy = 0.35;
+		// --------------------------------------------------------
 
 #if MACCATALYST || IOS
 		bool _isScrollChanged;
@@ -1315,7 +1317,7 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		internal virtual bool TouchHandled(SfCartesianChart cartesian, Point velocity)
 		{
 			//evite toute dérive verticale
-			velocity = new Point(velocity.X, 0);
+			velocity = EliminerDerive(velocity);
 
 			var area = cartesian._chartArea;
 			bool isPanEnd = true;
@@ -1832,40 +1834,57 @@ namespace Syncfusion.Maui.Toolkit.Charts
 			{
 				_lastFingerPoint = touchPoint;
 				_hasLastPoint = true;
-				_samples.Enqueue((t, touchPoint.X));
+				_samples.Enqueue((t, touchPoint.X, touchPoint.Y));
 				return;
 			}
 
 			double dx = touchPoint.X - _lastFingerPoint.X;
+			double dy = touchPoint.Y - _lastFingerPoint.Y;
 			_lastFingerPoint = touchPoint;
 
+			double newX;
+			double newY;
+
+			var last = _samples.Last();
 			if (Math.Abs(dx) < NoiseDx)
 			{
-				// On avance quand même le temps : ajoute un sample neutre
-				_samples.Enqueue((t, _samples.Last().x));
+				newX = last.x; // ignore micro variation X
 			}
 			else
 			{
-				_samples.Enqueue((t, _samples.Last().x + dx));
+				newX = last.x + dx;
 			}
 
-			// Fenêtre glissante
+			if (Math.Abs(dy) < NoiseDy)
+			{
+				newY = last.y; // ignore micro variation Y
+			}
+			else
+			{
+				newY = last.y + dy;
+			}
+
+			_samples.Enqueue((t, newX, newY));
+
 			while (_samples.Count > 1 && (t - _samples.Peek().t) > VelocityWindowSeconds)
 				_samples.Dequeue();
 		}
 
-		double ComputeInitialVelocity()
+		(double vx, double vy) ComputeInitialVelocities()
 		{
 			if (_samples.Count < 2)
-				return 0;
+				return (0, 0);
 
 			var first = _samples.Peek();
 			var last = _samples.Last();
 			double dt = last.t - first.t;
 			if (dt <= 0)
-				return 0;
+				return (0, 0);
+
 			double dx = last.x - first.x;
-			return dx / dt; // px/s
+			double dy = last.y - first.y;
+
+			return (dx / dt, dy / dt); // px/s
 		}
 
 		internal void TryStartInertia(SfCartesianChart chart)
@@ -1876,20 +1895,29 @@ namespace Syncfusion.Maui.Toolkit.Charts
 				return;
 			}
 
-			_initialVelocity = ComputeInitialVelocity();
-			if (Math.Abs(_initialVelocity) < MinVelocityStart)
+			var (vx, vy) = ComputeInitialVelocities();
+
+			// Respect du ZoomMode : si un axe est verrouillé inutile de lancer l’inertie correspondante
+			bool allowX = ZoomMode != ZoomMode.Y && Math.Abs(vx) >= MinVelocityStart;
+			bool allowY = ZoomMode != ZoomMode.X && Math.Abs(vy) >= MinVelocityStart;
+
+			if (!allowX && !allowY)
 			{
 				ResetVelocityTracking();
 				return;
 			}
 
-			StartInertia(chart, _initialVelocity);
+			_initialVelocityX = allowX ? vx : 0;
+			_initialVelocityY = allowY ? vy : 0;
+
+			StartInertia(chart, _initialVelocityX, _initialVelocityY);
 		}
 
-		void StartInertia(SfCartesianChart chart, double v0)
+		void StartInertia(SfCartesianChart chart, double v0x, double v0y)
 		{
 			_inertiaRunning = true;
-			double v = v0;
+			double vx = v0x;
+			double vy = v0y;
 
 			_inertiaTimer = Application.Current?.Dispatcher.CreateTimer();
 			if (_inertiaTimer == null)
@@ -1907,49 +1935,76 @@ namespace Syncfusion.Maui.Toolkit.Charts
 					return;
 				}
 
-				if (_panActive) // L’utilisateur retouche
+				if (_panActive)
 				{
 					StopInertia();
 					return;
 				}
 
 				double dt = InertiaFrameMs / 1000.0;
-				if (Math.Abs(v) <= MinVelocityStop)
+
+				bool activeX = Math.Abs(vx) > MinVelocityStop;
+				bool activeY = Math.Abs(vy) > MinVelocityStop;
+
+				if (!activeX && !activeY)
 				{
 					StopInertia();
 					return;
 				}
 
-				double dx = v * dt;
+				double dx = activeX ? vx * dt : 0;
+				double dy = activeY ? vy * dt : 0;
 
 #if ANDROID
 				dx = -dx;
+				dy = -dy;
 #endif
 
 				var clipRect = ((IChart)chart).ActualSeriesClipRect;
-				var before = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
-				PanTranslate(chart, clipRect, new Point(dx, 0));
-				var after = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
 
-				// Bord atteint (aucune variation)
-				if (Math.Abs(after - before) < 1e-7)
+				// Sommes avant
+				double beforeX = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
+				double beforeY = chart._chartArea._yAxes.Sum(a => a.ZoomPosition);
+
+				// Application du déplacement combiné
+				PanTranslate(chart, clipRect, new Point(dx, dy));
+
+				// Sommes après
+				double afterX = chart._chartArea._xAxes.Sum(a => a.ZoomPosition);
+				double afterY = chart._chartArea._yAxes.Sum(a => a.ZoomPosition);
+
+				// Si un axe ne bouge plus malgré une vitesse => on l’arrête
+				if (activeX && Math.Abs(afterX - beforeX) < 1e-7)
 				{
-					StopInertia();
-					return;
+					vx = 0;
+				}
+				if (activeY && Math.Abs(afterY - beforeY) < 1e-7)
+				{
+					vy = 0;
 				}
 
-				// Décélération linéaire
+				// Décélération linéaire indépendante
 				double dv = Deceleration * dt;
-				if (Math.Abs(v) <= dv)
+
+				if (Math.Abs(vx) <= dv)
+					vx = 0;
+				else
+					vx -= dv * Math.Sign(vx);
+
+				if (Math.Abs(vy) <= dv)
+					vy = 0;
+				else
+					vy -= dv * Math.Sign(vy);
+
+				if (Math.Abs(vx) <= MinVelocityStop && Math.Abs(vy) <= MinVelocityStop)
 				{
 					StopInertia();
 					return;
 				}
-				v -= dv * Math.Sign(v);
 			};
 
 			_inertiaTimer.Start();
-			ResetVelocityTracking(); // On n’a plus besoin des samples
+			ResetVelocityTracking();
 		}
 
 		void StopInertiaIfRunning()
@@ -1973,10 +2028,10 @@ namespace Syncfusion.Maui.Toolkit.Charts
 		{
 			_samples.Clear();
 			_hasLastPoint = false;
-			_initialVelocity = 0;
+			_initialVelocityX = 0;
+			_initialVelocityY = 0;
 		}
 
-		//permet au chart d'annuler proprement l'inertie sans déclencher la logique de tap.
 		internal bool CancelInertia()
 		{
 			if (_inertiaRunning)
