@@ -1139,7 +1139,7 @@ namespace Syncfusion.Maui.Toolkit.Expander
 		/// </summary>
 		void UpdateContentViewLayoutAndVisibility()
 		{
-			if ((!IsViewLoaded && !IsExpanded && FlowDirection != FlowDirection.RightToLeft && !Content!.IsVisible) || (Content == null && FlowDirection != FlowDirection.RightToLeft) || ContentView == null)
+			if (!IsViewLoaded || Content == null || ContentView == null)
 			{
 				return;
 			}
@@ -1225,7 +1225,7 @@ namespace Syncfusion.Maui.Toolkit.Expander
 		/// <param name="newvalue"></param>
 		void OnContentChanged(View? oldvalue, View? newvalue)
 		{
-			if ((!IsViewLoaded && !IsExpanded && FlowDirection != FlowDirection.RightToLeft && !Content!.IsVisible) || ContentView == null)
+			if (!IsViewLoaded || ContentView == null)
 			{
 				return;
 			}
@@ -1525,7 +1525,7 @@ namespace Syncfusion.Maui.Toolkit.Expander
 #if WINDOWS
 				new Size(300, 300);
 #else
-				new Size(DeviceDisplay.MainDisplayInfo.Width / DeviceDisplay.MainDisplayInfo.Density, DeviceDisplay.MainDisplayInfo.Height / DeviceDisplay.MainDisplayInfo.Density);              
+				new Size(DeviceDisplay.MainDisplayInfo.Width / DeviceDisplay.MainDisplayInfo.Density, DeviceDisplay.MainDisplayInfo.Height / DeviceDisplay.MainDisplayInfo.Density);
 #endif
 				double scaledWidth = Math.Min(scaledScreenSize.Width, scaledScreenSize.Height);
 				width = scaledWidth;
