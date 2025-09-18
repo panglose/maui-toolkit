@@ -13,10 +13,10 @@
 		<AssemblyTitle>Syncfusion.Maui.Toolkit</AssemblyTitle>
 		<Configurations>Release-Xml;Debug;Release</Configurations>
 		<Platforms>AnyCPU</Platforms>
-		<Version>1.0.6-carburo</Version>
-		<AssemblyVersion>1.0.6.0</AssemblyVersion>
-		<FileVersion>1.0.6.0</FileVersion>
-    <InformationalVersion>1.0.6-carburo</InformationalVersion>
+		<Version>1.0.7-carburo</Version>
+		<AssemblyVersion>1.0.7.0</AssemblyVersion>
+		<FileVersion>1.0.7.0</FileVersion>
+    <InformationalVersion>1.0.7-carburo</InformationalVersion>
 		<Company>Syncfusion Inc.</Company>
 		<Authors>Syncfusion Inc.</Authors>
 		<Copyright>Copyright 2001 - 2024 Syncfusion Inc.</Copyright>
