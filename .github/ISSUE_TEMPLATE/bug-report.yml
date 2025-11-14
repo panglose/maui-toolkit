@@ -39,11 +39,25 @@ body:
     validations:
       required: false
   - type: dropdown
+    id: dotnet-version-with-bug
+    attributes:
+      label: .NET Version 
+      description: In which .NET version are you encountering this issue?
+      options:
+        - .NET 8.0
+        - .NET 9.0
+        - .NET 10.0
+    validations:
+      required: true
+  - type: dropdown
     id: version-with-bug
     attributes:
       label: Version with bug
       description: In which version are you encountering this issue?
       options:
+        - 1.0.7
+        - 1.0.6
+        - 1.0.5
         - 1.0.4
         - 1.0.3
         - 1.0.2
@@ -68,6 +82,9 @@ body:
       label: Last Known Working Version
       description: If you answered "Yes," please specify the version where this functionality previously worked.
       options:
+        - 1.0.6
+        - 1.0.5
+        - 1.0.4
         - 1.0.3
         - 1.0.2
         - 1.0.1   
