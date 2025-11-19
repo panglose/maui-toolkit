@@ -26,14 +26,14 @@ namespace Syncfusion.Maui.Toolkit.Internals
 					UITouchRecognizerExt touchRecognizer = new UITouchRecognizerExt(this);
 					nativeView.AddGestureRecognizer(touchRecognizer);
 
-					if (OperatingSystem.IsIOSVersionAtLeast(13))
-					{
-						UIHoverRecognizerExt hoverGesture = new UIHoverRecognizerExt(this);
-						nativeView.AddGestureRecognizer(hoverGesture);
-					}
+					//if (OperatingSystem.IsIOSVersionAtLeast(13))
+					//{
+					//	UIHoverRecognizerExt hoverGesture = new UIHoverRecognizerExt(this);
+					//	nativeView.AddGestureRecognizer(hoverGesture);
+					//}
 
-					UIScrollRecognizerExt scrollRecognizer = new UIScrollRecognizerExt(this);
-					nativeView.AddGestureRecognizer(scrollRecognizer);
+					//UIScrollRecognizerExt scrollRecognizer = new UIScrollRecognizerExt(this);
+					//nativeView.AddGestureRecognizer(scrollRecognizer);
 				}
 			}
 		}
@@ -206,7 +206,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 	/// <summary>
 	/// Extends <see cref="UIPanGestureRecognizer"/> to handle touch events for the TouchDetector.
 	/// </summary>
-	internal class UITouchRecognizerExt : UIPanGestureRecognizer
+	internal class UITouchRecognizerExt : UIGestureRecognizer
 	{
 		#region Fields
 
