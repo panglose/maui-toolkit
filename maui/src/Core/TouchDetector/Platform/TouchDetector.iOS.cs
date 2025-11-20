@@ -3,6 +3,7 @@ using UIKit;
 using Foundation;
 using CoreGraphics;
 using PlatformView = UIKit.UIView;
+using Syncfusion.Maui.Toolkit.BottomSheet;
 
 namespace Syncfusion.Maui.Toolkit.Internals
 {
@@ -17,23 +18,34 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		/// Subscribes to native touch events for the given MAUI view.
 		/// </summary>
 		internal void SubscribeNativeTouchEvents(MauiView? mauiView)
-		{
+		{ 
 			if (mauiView != null && mauiView.Handler != null)
 			{
 				var handler = mauiView.Handler;
 				if (handler?.PlatformView is UIView nativeView)
 				{
-					UITouchRecognizerExt touchRecognizer = new UITouchRecognizerExt(this);
-					nativeView.AddGestureRecognizer(touchRecognizer);
+					if (mauiView is BottomSheetBorder)
+					{
+						//on bottom sheet border we are using basic touch recognizer
+						//to avoid pan gesture conflicts
+						UIGestureRecognizerExt basicRecognizer = new UIGestureRecognizerExt(this);
+						nativeView.AddGestureRecognizer(basicRecognizer);
+					}
+					else
+					{
+						// Pan based touch recognizer (legacy behavior retained)
+						UIPanRecognizerExt touchRecognizer = new UIPanRecognizerExt(this);
+						nativeView.AddGestureRecognizer(touchRecognizer);
 
-					//if (OperatingSystem.IsIOSVersionAtLeast(13))
-					//{
-					//	UIHoverRecognizerExt hoverGesture = new UIHoverRecognizerExt(this);
-					//	nativeView.AddGestureRecognizer(hoverGesture);
-					//}
+						if (OperatingSystem.IsIOSVersionAtLeast(13))
+						{
+							UIHoverRecognizerExt hoverGesture = new UIHoverRecognizerExt(this);
+							nativeView.AddGestureRecognizer(hoverGesture);
+						}
 
-					//UIScrollRecognizerExt scrollRecognizer = new UIScrollRecognizerExt(this);
-					//nativeView.AddGestureRecognizer(scrollRecognizer);
+						UIScrollRecognizerExt scrollRecognizer = new UIScrollRecognizerExt(this);
+						nativeView.AddGestureRecognizer(scrollRecognizer);
+					}
 				}
 			}
 		}
@@ -53,7 +65,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 					{
 						foreach (var item in gestures)
 						{
-							if (item is UITouchRecognizerExt || item is UIHoverRecognizerExt || item is UIScrollRecognizerExt)
+							if (item is UIPanRecognizerExt || item is UIGestureRecognizerExt || item is UIHoverRecognizerExt || item is UIScrollRecognizerExt)
 							{
 								nativeView.RemoveGestureRecognizer(item);
 							}
@@ -168,7 +180,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		/// </summary>
 		bool GestureRecognizer(UIGestureRecognizer gestureRecognizer, UIGestureRecognizer otherGestureRecognizer)
 		{
-			if (otherGestureRecognizer is UITouchRecognizerExt || TouchListener == null)
+			if (otherGestureRecognizer is UIPanRecognizerExt || otherGestureRecognizer is UIGestureRecognizerExt || TouchListener == null)
 			{
 				return true;
 			}
@@ -201,69 +213,144 @@ namespace Syncfusion.Maui.Toolkit.Internals
 
 	#endregion
 
-	#region Touch Recognizer
+	#region Generic Touch Recognizer Core
 
 	/// <summary>
-	/// Extends <see cref="UIPanGestureRecognizer"/> to handle touch events for the TouchDetector.
+	/// Generic core used by touch recognizers to avoid duplicated logic.
 	/// </summary>
-	internal class UITouchRecognizerExt : UIGestureRecognizer
+	internal sealed class TouchRecognizerCore<TGesture> where TGesture : UIGestureRecognizer
 	{
-		#region Fields
+		readonly WeakReference<TouchDetector> _detectorRef;
+		readonly WeakReference<ITouchListener>? _listenerRef;
 
-		WeakReference<TouchDetector>? _touchDetector;
-		WeakReference<ITouchListener>? _touchListener;
+		internal TouchRecognizerCore(TouchDetector detector)
+		{
+			_detectorRef = new(detector);
+			if (detector.MauiView is ITouchListener tl)
+				_listenerRef = new(tl);
+		}
 
-		#endregion
+		TouchDetector? Detector => _detectorRef.TryGetTarget(out var d) ? d : null;
+		ITouchListener? Listener => _listenerRef != null && _listenerRef.TryGetTarget(out var l) ? l : null;
 
-		#region Constructor
+		internal bool IsActive =>
+			Detector != null &&
+			Detector.MauiView.IsEnabled &&
+			!Detector.MauiView.InputTransparent;
+
+		internal bool ShouldRecognizeSimultaneously(UIGestureRecognizer other)
+		{
+			if (other is UIScrollRecognizerExt || other is UIPanRecognizerExt || other is UIGestureRecognizerExt || Listener == null)
+				return true;
+			return !Listener.IsTouchHandled;
+		}
+
+		internal void Dispatch(TGesture gesture, NSSet touches, PointerActions action)
+		{
+			if (!IsActive) return;
+			if (touches.AnyObject is not UITouch touch) return;
+			var detector = Detector;
+			if (detector == null) return;
+
+			var device = touch.Type == UITouchType.Stylus ? PointerDeviceType.Stylus : PointerDeviceType.Touch;
+#if MACCATALYST
+			device = PointerDeviceType.Mouse;
+#endif
+			long id = touch.Handle.Handle.ToInt64();
+			CGPoint pt = touch.LocationInView(gesture.View);
+
+			var args = new PointerEventArgs(
+				(relativeTo) => TouchDetector.CalculatePosition(relativeTo, detector.MauiView, gesture),
+				id,
+				action,
+				device,
+				new Point(pt.X, pt.Y))
+			{
+				IsLeftButtonPressed = touch.TapCount == 1
+			};
+
+			detector.OnTouchAction(args);
+		}
+	}
+
+	#endregion
+
+	#region UIGestureRecognizer variant (pure)
+
+	/// <summary>
+	/// Simple gesture recognizer variant based directly on UIGestureRecognizer.
+	/// </summary>
+	internal sealed class UIGestureRecognizerExt : UIGestureRecognizer
+	{
+		readonly TouchRecognizerCore<UIGestureRecognizerExt> _core;
+
+		internal UIGestureRecognizerExt(TouchDetector detector)
+		{
+			_core = new TouchRecognizerCore<UIGestureRecognizerExt>(detector);
+			ShouldRecognizeSimultaneously += (g, other) => _core.ShouldRecognizeSimultaneously(other);
+		}
 
 		/// <summary>
-		/// Initializes a new instance of the UITouchRecognizerExt class.
+		/// Handles the beginning of touch events.
 		/// </summary>
-		internal UITouchRecognizerExt(TouchDetector listener)
+		/// <param name="touches">The set of touches that began.</param>
+		/// <param name="evt">The UIEvent associated with the touches.</param>
+		public override void TouchesBegan(NSSet touches, UIEvent evt)
 		{
-			TouchDetector = listener;
-			if (TouchDetector.MauiView is ITouchListener _touchListener)
-			{
-				TouchListener = _touchListener;
-			}
-
-			ShouldRecognizeSimultaneously += GestureRecognizer;
+			base.TouchesBegan(touches, evt);
+			_core.Dispatch(this, touches, PointerActions.Pressed);
 		}
 
-		#endregion
-
-		#region Properties
-
-		TouchDetector? TouchDetector
+		/// <summary>
+		/// Handles the movement of touch events.
+		/// </summary>
+		/// <param name="touches">The set of touches that moved.</param>
+		/// <param name="evt">The UIEvent associated with the touches.</param>
+		public override void TouchesMoved(NSSet touches, UIEvent evt)
 		{
-			get => _touchDetector != null && _touchDetector.TryGetTarget(out var v) ? v : null;
-			set => _touchDetector = value == null ? null : new(value);
+			base.TouchesMoved(touches, evt);
+			_core.Dispatch(this, touches, PointerActions.Moved);
 		}
 
-		ITouchListener? TouchListener
+		/// <summary>
+		/// Handles the end of touch events.
+		/// </summary>
+		/// <param name="touches">The set of touches that ended.</param>
+		/// <param name="evt">The UIEvent associated with the touches.</param>
+		public override void TouchesEnded(NSSet touches, UIEvent evt)
 		{
-			get => _touchListener != null && _touchListener.TryGetTarget(out var v) ? v : null;
-			set => _touchListener = value == null ? null : new(value);
+			base.TouchesEnded(touches, evt);
+			_core.Dispatch(this, touches, PointerActions.Released);
 		}
 
-		#endregion
-
-		#region Private Methods
-
-		bool GestureRecognizer(UIGestureRecognizer gestureRecognizer, UIGestureRecognizer otherGestureRecognizer)
+		/// <summary>
+		/// Handles the cancellation of touch events.
+		/// </summary>
+		/// <param name="touches">The set of touches that were cancelled.</param>
+		/// <param name="evt">The UIEvent associated with the touches.</param>
+		public override void TouchesCancelled(NSSet touches, UIEvent evt)
 		{
-			if (otherGestureRecognizer is GestureDetector.UIPanGestureExt || otherGestureRecognizer is UIScrollRecognizerExt || TouchListener == null)
-			{
-				return true;
-			}
-
-			return !TouchListener.IsTouchHandled;
+			base.TouchesCancelled(touches, evt);
+			_core.Dispatch(this, touches, PointerActions.Cancelled);
 		}
+	}
 
-		#endregion
+	#endregion
 
-		#region Override methods
+	#region UIPanGestureRecognizer variant
+
+	/// <summary>
+	/// Pan-capable touch recognizer variant retaining previous behavior.
+	/// </summary>
+	internal sealed class UIPanRecognizerExt : UIPanGestureRecognizer
+	{
+		readonly TouchRecognizerCore<UIPanRecognizerExt> _core;
+
+		internal UIPanRecognizerExt(TouchDetector detector)
+		{
+			_core = new TouchRecognizerCore<UIPanRecognizerExt>(detector);
+			ShouldRecognizeSimultaneously += (g, other) => _core.ShouldRecognizeSimultaneously(other);
+		}
 
 		/// <summary>
 		/// Handles the beginning of touch events.
@@ -273,26 +360,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		public override void TouchesBegan(NSSet touches, UIEvent uiEvent)
 		{
 			base.TouchesBegan(touches, uiEvent);
-
-			if (TouchDetector == null || !TouchDetector.MauiView.IsEnabled || TouchDetector.MauiView.InputTransparent)
-			{
-				return;
-			}
-
-			if (touches.AnyObject is UITouch touch)
-			{
-				PointerDeviceType pointerDeviceType = touch.Type == UITouchType.Stylus ? PointerDeviceType.Stylus : PointerDeviceType.Touch;
-#if MACCATALYST
-				pointerDeviceType = PointerDeviceType.Mouse;
-#endif
-				long pointerId = touch.Handle.Handle.ToInt64();
-				CGPoint point = touch.LocationInView(View);
-				TouchDetector.OnTouchAction(
-				   new PointerEventArgs((relativeTo) => TouchDetector.CalculatePosition(relativeTo, TouchDetector.MauiView, this), pointerId, PointerActions.Pressed, pointerDeviceType, new Point(point.X, point.Y))
-				   {
-					   IsLeftButtonPressed = touch.TapCount == 1
-				   });
-			}
+			_core.Dispatch(this, touches, PointerActions.Pressed);
 		}
 
 		/// <summary>
@@ -303,24 +371,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		public override void TouchesMoved(NSSet touches, UIEvent uiEvent)
 		{
 			base.TouchesMoved(touches, uiEvent);
-			if (TouchDetector == null || !TouchDetector.MauiView.IsEnabled || TouchDetector.MauiView.InputTransparent)
-			{
-				return;
-			}
-
-			if (touches.AnyObject is UITouch touch)
-			{
-				PointerDeviceType pointerDeviceType = touch.Type == UITouchType.Stylus ? PointerDeviceType.Stylus : PointerDeviceType.Touch;
-#if MACCATALYST
-				pointerDeviceType = PointerDeviceType.Mouse;
-#endif
-				long pointerId = touch.Handle.Handle.ToInt64();
-				CGPoint point = touch.LocationInView(View);
-				TouchDetector.OnTouchAction(new PointerEventArgs((relativeTo) => TouchDetector.CalculatePosition(relativeTo, TouchDetector.MauiView, this), pointerId, PointerActions.Moved, pointerDeviceType, new Point(point.X, point.Y))
-				{
-					IsLeftButtonPressed = touch.TapCount == 1
-				});
-			}
+			_core.Dispatch(this, touches, PointerActions.Moved);
 		}
 
 		/// <summary>
@@ -331,21 +382,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		public override void TouchesEnded(NSSet touches, UIEvent uiEvent)
 		{
 			base.TouchesEnded(touches, uiEvent);
-			if (TouchDetector == null || !TouchDetector.MauiView.IsEnabled || TouchDetector.MauiView.InputTransparent)
-			{
-				return;
-			}
-
-			if (touches.AnyObject is UITouch touch)
-			{
-				PointerDeviceType pointerDeviceType = touch.Type == UITouchType.Stylus ? PointerDeviceType.Stylus : PointerDeviceType.Touch;
-#if MACCATALYST
-				pointerDeviceType = PointerDeviceType.Mouse;
-#endif
-				long pointerId = touch.Handle.Handle.ToInt64();
-				CGPoint point = touch.LocationInView(View);
-				TouchDetector.OnTouchAction((relativeTo) => TouchDetector.CalculatePosition(relativeTo, TouchDetector.MauiView, this), pointerId, PointerActions.Released, pointerDeviceType, new Point(point.X, point.Y));
-			}
+			_core.Dispatch(this, touches, PointerActions.Released);
 		}
 
 		/// <summary>
@@ -356,24 +393,8 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		public override void TouchesCancelled(NSSet touches, UIEvent uiEvent)
 		{
 			base.TouchesCancelled(touches, uiEvent);
-			if (TouchDetector == null || !TouchDetector.MauiView.IsEnabled || TouchDetector.MauiView.InputTransparent)
-			{
-				return;
-			}
-
-			if (touches.AnyObject is UITouch touch)
-			{
-				PointerDeviceType pointerDeviceType = touch.Type == UITouchType.Stylus ? PointerDeviceType.Stylus : PointerDeviceType.Touch;
-#if MACCATALYST
-				pointerDeviceType = PointerDeviceType.Mouse;
-#endif
-				long pointerId = touch.Handle.Handle.ToInt64();
-				CGPoint point = touch.LocationInView(View);
-				TouchDetector.OnTouchAction((relativeTo) => TouchDetector.CalculatePosition(relativeTo, TouchDetector.MauiView, this), pointerId, PointerActions.Cancelled, pointerDeviceType, new Point(point.X, point.Y));
-			}
+			_core.Dispatch(this, touches, PointerActions.Cancelled);
 		}
-
-		#endregion
 	}
 
 	#endregion
@@ -436,23 +457,17 @@ namespace Syncfusion.Maui.Toolkit.Internals
 
 		#region Private Methods
 
-		/// <summary>
-		/// Updates the allowed scroll types mask based on the current platform and version.
-		/// </summary>
 		static bool UpdateAllowedScrollTypesMask()
 		{
 			if (DeviceInfo.Platform == DevicePlatform.iOS)
 			{
-				// Check if the current platform is iOS and if it is 13.4 or above
 				var iosVersion = new Version(UIDevice.CurrentDevice.SystemVersion);
 				if (iosVersion >= new Version(13, 4))
 				{ return true; }
 			}
 			else if (DeviceInfo.Platform == DevicePlatform.MacCatalyst)
 			{
-
 #if MACCATALYST13_4_OR_GREATER
-
 				return true;
 #endif
 			}
@@ -460,20 +475,11 @@ namespace Syncfusion.Maui.Toolkit.Internals
 			return false;
 		}
 
-		/// <summary>
-		/// Determines whether this gesture recognizer should receive the touch.
-		/// </summary>
-		/// <returns>
-		/// Always returns false, indicating that this recognizer should not receive the touch.
-		/// </returns>
 		bool GesturerTouchRecognizer(UIGestureRecognizer recognizer, UITouch touch)
 		{
 			return false;
 		}
 
-		/// <summary>
-		/// Handles scroll events and triggers the appropriate action on the TouchDetector.
-		/// </summary>
 		void OnScroll()
 		{
 			if (TouchDetector == null || !TouchDetector.MauiView.IsEnabled || TouchDetector.MauiView.InputTransparent)
@@ -488,12 +494,9 @@ namespace Syncfusion.Maui.Toolkit.Internals
 			TouchDetector.OnScrollAction(pointerId, new Point(point.X, point.Y), delta.Y != 0 ? delta.Y : delta.X);
 		}
 
-		/// <summary>
-		/// Determines whether this gesture recognizer should recognize simultaneously with other gesture recognizers.
-		/// </summary>
 		bool GestureRecognizer(UIGestureRecognizer gestureRecognizer, UIGestureRecognizer otherGestureRecognizer)
 		{
-			if (otherGestureRecognizer is GestureDetector.UIPanGestureExt || otherGestureRecognizer is UITouchRecognizerExt || TouchListener == null)
+			if (otherGestureRecognizer is GestureDetector.UIPanGestureExt || otherGestureRecognizer is UIPanRecognizerExt || otherGestureRecognizer is UIGestureRecognizerExt || TouchListener == null)
 			{
 				return true;
 			}

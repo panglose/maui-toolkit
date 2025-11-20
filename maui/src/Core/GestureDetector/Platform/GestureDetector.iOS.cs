@@ -263,7 +263,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 			/// </summary>
 			bool GestureRecognizer(UIGestureRecognizer gestureRecognizer, UIGestureRecognizer otherGestureRecognizer)
 			{
-				if (otherGestureRecognizer is UITouchRecognizerExt || otherGestureRecognizer is UIScrollRecognizerExt || GestureListener == null)
+				if (otherGestureRecognizer is UIPanRecognizerExt || otherGestureRecognizer is UIScrollRecognizerExt || GestureListener == null)
 				{
 					return true;
 				}
