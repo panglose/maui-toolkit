@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using System;
+using System.Reflection;
 using CoreGraphics;
+using log4net;
 using Microsoft.Maui;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
@@ -22,6 +24,8 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		IScrollViewHandler,
 		ICrossPlatformLayout
 	{
+		private static ILog _Log = LogManager.GetLogger(typeof(SfPickerScrollViewHandler));		
+
 		const nint ContentTag = 0x845fed;
 
 		PickerScrollViewDelegate? _pickerDelegate;
@@ -75,14 +79,7 @@ namespace Syncfusion.Maui.Toolkit.Internals
 
 		protected override UIScrollView CreatePlatformView()
 		{
-			return new UIScrollViewExt();
-		}
-
-		public override void SetVirtualView(IView view)
-		{
-			base.SetVirtualView(view);
-			((UIScrollViewExt)PlatformView).View = view;
-
+			return new MauiScrollView();
 		}
 
 		//
@@ -229,9 +226,10 @@ namespace Syncfusion.Maui.Toolkit.Internals
 
 			if (changed)
 			{
-				UIScrollViewExt.InvalidateMeasure(platformView);
+				MauiPrivateInvoke.InvalidateMeasure(platformView);
 			}
-		}		
+		}
+		
 
 		static UIView? GetContentView(UIScrollView scrollView)
 		{
@@ -398,486 +396,54 @@ namespace Syncfusion.Maui.Toolkit.Internals
 		}		
 	}
 
-	internal class UIScrollViewExt : UIScrollView, ICrossPlatformLayoutBacking
+	internal static class MauiPrivateInvoke
 	{
-		internal const nint ContentTag = 0x845fed;
+		private static readonly ILog _Log = LogManager.GetLogger(typeof(MauiPrivateInvoke));
+		private static readonly MethodInfo? _invalidateMeasureMethod;
 
-		/// <summary>
-		/// Flag indicating whether the parent view hierarchy should be invalidated when this view is moved to a window.
-		/// Used to ensure proper layout recalculation when the view becomes visible.
-		/// </summary>
-		bool _invalidateParentWhenMovedToWindow;
-
-		/// <summary>
-		/// Cached result of whether this scroll view is a descendant of another UIScrollView.
-		/// Null when not yet calculated, true if nested within another scroll view, false otherwise.
-		/// This affects safe area handling behavior.
-		/// </summary>
-		bool? _scrollViewDescendant;
-
-		/// <summary>
-		/// The height constraint used in the last measure operation.
-		/// Used to determine if a re-measure is needed when constraints change.
-		/// </summary>
-		double _lastMeasureHeight;
-
-		/// <summary>
-		/// The width constraint used in the last measure operation.
-		/// Used to determine if a re-measure is needed when constraints change.
-		/// </summary>
-		double _lastMeasureWidth;
-
-		/// <summary>
-		/// The height constraint used in the last arrange operation.
-		/// Used to determine if a re-arrange is needed when the frame changes.
-		/// </summary>
-		double _lastArrangeHeight;
-
-		/// <summary>
-		/// The width constraint used in the last arrange operation.
-		/// Used to determine if a re-arrange is needed when the frame changes.
-		/// </summary>
-		double _lastArrangeWidth;		
-
-		/// <summary>
-		/// The previous effective user interface layout direction (LTR/RTL).
-		/// Used to detect when the layout direction changes and trigger appropriate content repositioning.
-		/// </summary>
-		UIUserInterfaceLayoutDirection? _previousEffectiveUserInterfaceLayoutDirection;
-
-		WeakReference<ICrossPlatformLayout>? _crossPlatformLayoutReference;
-
-
-		/// <summary>
-		/// Weak reference to the cross-platform layout that manages the content of this scroll view.
-		/// Weak reference prevents circular references and allows proper garbage collection.
-		/// </summary>
-		WeakReference<IView>? _reference;
-
-		/// <summary>
-		/// Gets or sets the cross-platform layout that manages the content of this scroll view.
-		/// The layout is responsible for measuring and arranging the scroll view's content.
-		/// </summary>
-		public ICrossPlatformLayout? CrossPlatformLayout
+		static MauiPrivateInvoke()
 		{
-			get => _crossPlatformLayoutReference != null && _crossPlatformLayoutReference.TryGetTarget(out var v) ? v : null;
-			set => _crossPlatformLayoutReference = value == null ? null : new WeakReference<ICrossPlatformLayout>(value);
-		}
+			//_Log.Info("MauiPrivateInvoke static ctor");
 
-		/// <summary>
-		/// Initializes a new instance of the MauiScrollView class.
-		/// </summary>
-		public UIScrollViewExt()
-		{
-		}
+			// On récupère l’assembly MAUI lui-même
+			var mauiAsm = typeof(Microsoft.Maui.IView).Assembly;
 
-		/// <summary>
-		/// Called by iOS when the adjusted content inset changes (e.g., when safe area changes).
-		/// This method invalidates the safe area and triggers a layout update if needed.
-		/// </summary>
-		public override void AdjustedContentInsetDidChange()
-		{
-			base.AdjustedContentInsetDidChange();
+			// Et on récupère le type interne ViewExtensions
+			var extType = mauiAsm.GetType("Microsoft.Maui.Platform.ViewExtensions");
 
-			// It looks like when this invalidates it doesn't auto trigger a layout pass
-			if (!ValidateSafeArea())
+			if (extType != null)
 			{
-				InvalidateMeasure(this);
-				InvalidateAncestorsMeasures(this);
-			}
-		}		
-
-		/// <summary>
-		/// Overrides the default UIScrollView layout behavior to integrate with MAUI's cross-platform layout system.
-		/// This method handles safe area validation, measures and arranges content, and manages RTL layout adjustments.
-		/// It's called by iOS whenever the view needs to be laid out, including during scrolling operations.
-		/// </summary>
-		internal IView? View
-		{
-			get => _reference != null && _reference.TryGetTarget(out var v) ? v : null;
-			set => _reference = value == null ? null : new(value);
-		}
-
-		public override void LayoutSubviews()
-		{
-			// If there's no cross-platform layout, fall back to default UIScrollView behavior
-			if (CrossPlatformLayout is null)
-			{
-				base.LayoutSubviews();
-				return;
-			}
-
-			// Validate and update safe area if needed, invalidating constraints cache if changes occurred
-			if (!ValidateSafeArea())
-			{
-				InvalidateConstraintsCache();
-			}
-
-			// LayoutSubviews is invoked while scrolling, so we need to arrange the content only when it's necessary.
-			// This could be done via `override ScrollViewHandler.PlatformArrange` but that wouldn't cover the case
-			// when the ScrollView is attached to a non-MauiView parent (i.e. DeviceTests).
-			var bounds = Bounds;
-			var widthConstraint = (double)bounds.Width;
-			var heightConstraint = (double)bounds.Height;
-			ValidateSafeArea();
-			var frameChanged = _lastArrangeWidth != widthConstraint || _lastArrangeHeight != heightConstraint;
-
-			// If the frame changed, we need to arrange (and potentially measure) the content again
-			if (frameChanged)
-			{
-				_lastArrangeWidth = widthConstraint;
-				_lastArrangeHeight = heightConstraint;
-
-				// Check if we need to re-measure the content with the new constraints
-				if (!IsMeasureValid(widthConstraint, heightConstraint))
-				{
-					CrossPlatformMeasure(widthConstraint, heightConstraint);
-					CacheMeasureConstraints(widthConstraint, heightConstraint);
-				}
-
-				var contentSize = CrossPlatformArrange(Bounds).ToCGSize();
-
-				// Clamp content size based on ScrollView orientation to prevent unwanted scrolling
-				if (View is IScrollView scrollView)
-				{
-					var frameSize = Bounds.Size;
-					var orientation = scrollView.Orientation;
-
-					// Clamp width if horizontal scrolling is disabled and content is larger than frame
-					if (orientation is ScrollOrientation.Vertical or ScrollOrientation.Neither && contentSize.Width > frameSize.Width)
-					{
-						contentSize = new CGSize(frameSize.Width, contentSize.Height);
-					}
-
-					// Clamp height if vertical scrolling is disabled and content is larger than frame
-					if (orientation is ScrollOrientation.Horizontal or ScrollOrientation.Neither && contentSize.Height > frameSize.Height)
-					{
-						contentSize = new CGSize(contentSize.Width, frameSize.Height);
-					}
-				}
-
-				// When the content size changes, we need to adjust the scrollable area size so that the content can fit in it.
-				if (ContentSize != contentSize)
-				{
-					ContentSize = contentSize;
-
-					// Invalidation stops at `UIScrollViews` for performance reasons,
-					// but when the content size changes, we need to invalidate the ancestors
-					// in case the ScrollView is configured to grow/shrink with its content.
-					InvalidateAncestorsMeasures(this);
-				}
-			}
-
-			base.LayoutSubviews();
-		}
-
-
-		/// <summary>
-		/// Validates and updates the safe area configuration. This method checks if the safe area
-		/// has changed and updates the internal state accordingly.
-		/// </summary>
-		/// <returns>True if the safe area configuration hasn't changed in a way that affects layout, false otherwise.</returns>
-		bool ValidateSafeArea() => true;
-
-
-		UIEdgeInsets SystemAdjustedContentInset
-		{
-			get
-			{
-				UIEdgeInsets adjusted = AdjustedContentInset;
-				UIEdgeInsets content = ContentInset;
-
-				return new UIEdgeInsets(
-					adjusted.Top - content.Top,
-					adjusted.Left - content.Left,
-					adjusted.Bottom - content.Bottom,
-					adjusted.Right - content.Right
+				_invalidateMeasureMethod = extType.GetMethod(
+					"InvalidateMeasure",
+					BindingFlags.Static | BindingFlags.NonPublic,
+					binder: null,
+					types: new[] { typeof(UIView) },
+					modifiers: null
 				);
 			}
+
+			//_Log.Info($"MauiPrivateInvoke: ViewExtensions type found = {extType != null}");
+			//_Log.Info($"MauiPrivateInvoke: InvalidateMeasure method found = {_invalidateMeasureMethod != null}");
 		}
 
-		/// <summary>
-		/// Arranges the cross-platform content within the specified bounds, accounting for safe area adjustments.
-		/// This method applies safe area insets to the bounds before arranging the content.
-		/// </summary>
-		/// <param name="bounds">The bounds within which to arrange the content.</param>
-		/// <returns>The size of the arranged content.</returns>
-		Size CrossPlatformArrange(CGRect bounds)
+		public static void InvalidateMeasure(UIView view)
 		{
-			bounds = new Rect(new Point(), bounds.Size.ToSize());
+			//_Log.Info("MauiPrivateInvoke.InvalidateMeasure called");
 
-			Size contentSize;
+			if (view == null)
+				return;
 
-
-			double width;
-			double height;
-			if (SystemAdjustedContentInset == UIEdgeInsets.Zero || ContentInsetAdjustmentBehavior == UIScrollViewContentInsetAdjustmentBehavior.Never)
+			if (_invalidateMeasureMethod != null)
 			{
-				contentSize = CrossPlatformLayout?.CrossPlatformArrange(bounds.ToRectangle()) ?? Size.Zero;
-
-				width = contentSize.Width;
-				height = contentSize.Height;
+				//_Log.Info("Invoking ViewExtensions.InvalidateMeasure via reflection…");
+				_invalidateMeasureMethod.Invoke(null, new object[] { view });
 			}
 			else
 			{
-				contentSize = CrossPlatformLayout?.CrossPlatformArrange(new Rect(new Point(), bounds.Size.ToSize())) ?? Size.Zero;
-
-				width = contentSize.Width;
-				height = contentSize.Height;
-			}
-
-
-			// When using ContentInsetAdjustmentBehavior.Automatic, UIKit dynamically decides whether to apply 
-			// safe area insets to the scroll view (via AdjustedContentInset) or to push them into the child view's SafeAreaInsets.
-			// This decision depends on whether the scroll view is considered "scrollable"—i.e., whether the contentSize 
-			// is larger than the visible bounds (after accounting for safe areas).
-			//
-			// If the content size is *just* smaller than or equal to the scroll view’s bounds, UIKit may decide that
-			// scrolling isn’t needed and push the safe area insets into the child instead. This can cause:
-			//   - content centering to behave incorrectly (e.g., not respecting safe areas),
-			//   - layout loops where the child resizes in response to changing safe area insets,
-			//   - instability when transitioning between scrollable and non-scrollable states.
-			//
-			// This logic adds safe area padding to the contentSize *only if* the content is nearly large enough to require scrolling,
-			// ensuring the scroll view remains in "scrollable mode" and keeps safe area insets at the scroll view level.
-			// This avoids inset flip-flopping and keeps layout behavior stable and predictable.
-
-
-			contentSize = new Size(width, height);
-
-			// For Right-To-Left (RTL) layouts, we need to adjust the content arrangement and offset
-			// to ensure the content is correctly aligned and scrolled. This involves a second layout
-			// arrangement with an adjusted starting point and recalculating the content offset.
-			if (_previousEffectiveUserInterfaceLayoutDirection != EffectiveUserInterfaceLayoutDirection)
-			{
-				// In mac platform, Scrollbar is not updated based on FlowDirection, so resetting the scroll indicators
-				// It's a native limitation; to maintain platform consistency, a hack fix is applied to show the Scrollbar based on the FlowDirection.
-				if (OperatingSystem.IsMacCatalyst() && _previousEffectiveUserInterfaceLayoutDirection is not null)
-				{
-					bool showsVertical = ShowsVerticalScrollIndicator;
-					bool showsHorizontal = ShowsHorizontalScrollIndicator;
-
-					ShowsVerticalScrollIndicator = false;
-					ShowsHorizontalScrollIndicator = false;
-
-					ShowsVerticalScrollIndicator = showsVertical;
-					ShowsHorizontalScrollIndicator = showsHorizontal;
-				}
-
-				if (EffectiveUserInterfaceLayoutDirection == UIUserInterfaceLayoutDirection.RightToLeft)
-				{
-					var horizontalOffset = contentSize.Width - bounds.Width;
-
-					if (SystemAdjustedContentInset == UIEdgeInsets.Zero || ContentInsetAdjustmentBehavior == UIScrollViewContentInsetAdjustmentBehavior.Never)
-					{
-						CrossPlatformLayout?.CrossPlatformArrange(new Rect(new Point(-horizontalOffset, 0), bounds.Size.ToSize()));
-					}
-					else
-					{
-						CrossPlatformLayout?.CrossPlatformArrange(new Rect(new Point(-horizontalOffset, 0), bounds.Size.ToSize()));
-					}
-
-					ContentOffset = new CGPoint(horizontalOffset, 0);
-
-				}
-				else if (_previousEffectiveUserInterfaceLayoutDirection is not null)
-				{
-					ContentOffset = new CGPoint(0, ContentOffset.Y);
-				}
-			}
-
-			// When switching between LTR and RTL, we need to re-arrange and offset content exactly once
-			// to avoid cumulative shifts or incorrect offsets on subsequent layouts.
-			_previousEffectiveUserInterfaceLayoutDirection = EffectiveUserInterfaceLayoutDirection;
-
-			return contentSize;
-		}
-
-		/// <summary>
-		/// Measures the cross-platform content with the specified constraints, accounting for safe area adjustments.
-		/// This method reduces the constraints by the safe area thickness before measuring, then adds it back
-		/// to the result so the container can allocate the correct space.
-		/// </summary>
-		/// <param name="widthConstraint">The available width for the content.</param>
-		/// <param name="heightConstraint">The available height for the content.</param>
-		/// <returns>The measured size of the content, including safe area adjustments if applicable.</returns>
-		public Size CrossPlatformMeasure(double widthConstraint, double heightConstraint)
-		{
-			var crossPlatformSize = CrossPlatformLayout?.CrossPlatformMeasure(widthConstraint, heightConstraint) ?? Size.Zero;
-
-
-
-			return crossPlatformSize;
-		}
-
-		/// <summary>
-		/// Calculates the size that fits within the given constraints. This method is called by iOS
-		/// when the system needs to determine the natural size of the scroll view.
-		/// </summary>
-		/// <param name="size">The available size constraints.</param>
-		/// <returns>The size that fits within the constraints.</returns>
-
-		public override CGSize SizeThatFits(CGSize size)
-		{
-			if (CrossPlatformLayout is null)
-			{
-				return new CGSize();
-			}
-
-			var widthConstraint = (double)size.Width;
-			var heightConstraint = (double)size.Height;
-
-			var contentSize = CrossPlatformMeasure(widthConstraint, heightConstraint);
-
-			CacheMeasureConstraints(widthConstraint, heightConstraint);
-
-			return contentSize;
-		}
-
-		/// <summary>
-		/// Marks that ancestor measures should be invalidated when this view is moved to a window.
-		/// This is used to ensure proper layout recalculation when the view becomes visible.
-		/// </summary>
-		void InvalidateAncestorsMeasuresWhenMovedToWindow()
-		{
-			_invalidateParentWhenMovedToWindow = true;
-		}
-
-		/// <summary>
-		/// Invalidates the measure of this view, causing it to be re-measured and re-laid out.
-		/// This method is called when the view's content or constraints change.
-		/// </summary>
-		/// <param name="isPropagating">Whether this invalidation is propagating up the view hierarchy.</param>
-		/// <returns>True if the invalidation should stop propagating, false otherwise.</returns>
-		bool InvalidateMeasure(bool isPropagating)
-		{
-			ValidateSafeArea();
-			SetNeedsLayout();
-			InvalidateConstraintsCache();
-
-			return !isPropagating;
-		}
-
-		/// <summary>
-		/// Checks if the current measure is valid for the given constraints.
-		/// This helps avoid unnecessary re-measurements when the constraints haven't changed.
-		/// </summary>
-		/// <param name="widthConstraint">The width constraint to check.</param>
-		/// <param name="heightConstraint">The height constraint to check.</param>
-		/// <returns>True if the last measure is still valid for these constraints, false otherwise.</returns>
-		bool IsMeasureValid(double widthConstraint, double heightConstraint)
-		{
-			// Check the last constraints this View was measured with; if they're the same,
-			// then the current measure info is already correct, and we don't need to repeat it
-			return heightConstraint == _lastMeasureHeight && widthConstraint == _lastMeasureWidth;
-		}
-
-		/// <summary>
-		/// Invalidates the cached constraint values, forcing a re-measurement and re-arrangement
-		/// on the next layout pass.
-		/// </summary>
-		void InvalidateConstraintsCache()
-		{
-			_lastMeasureWidth = double.NaN;
-			_lastMeasureHeight = double.NaN;
-			_lastArrangeWidth = double.NaN;
-			_lastArrangeHeight = double.NaN;
-		}
-
-		/// <summary>
-		/// Caches the measure constraints for future validation.
-		/// This helps optimize performance by avoiding unnecessary re-measurements.
-		/// </summary>
-		/// <param name="widthConstraint">The width constraint to cache.</param>
-		/// <param name="heightConstraint">The height constraint to cache.</param>
-		void CacheMeasureConstraints(double widthConstraint, double heightConstraint)
-		{
-			_lastMeasureWidth = widthConstraint;
-			_lastMeasureHeight = heightConstraint;
-		}
-
-		/// <summary>
-		/// Called when the view is moved to a window (added to or removed from the view hierarchy).
-		/// This method handles cleanup and initialization tasks, including invalidating cached values
-		/// and triggering ancestor measure invalidation if needed.
-		/// </summary>
-		public override void MovedToWindow()
-		{
-			base.MovedToWindow();
-
-			// Clear cached scroll view descendant status since the view hierarchy may have changed
-			_scrollViewDescendant = null;
-
-			// If ancestor measure invalidation was requested, trigger it now
-			if (_invalidateParentWhenMovedToWindow)
-			{
-				_invalidateParentWhenMovedToWindow = false;
-				InvalidateAncestorsMeasures(this);
-			}
-		}
-
-		internal static void InvalidateAncestorsMeasures(UIView child)
-		{
-			var childMauiPlatformLayout = child as UIScrollViewExt;
-
-			while (true)
-			{
-				// We verify the presence of a Window to prevent scenarios where an invalidate might propagate up the view hierarchy  
-				// to a SuperView that has already been disposed. Accessing such a disposed view would result in a crash (see #24032).  
-				// This validation is only possible using `IMauiPlatformView`, as it provides a way to schedule an invalidation when the view is moved to window.  
-				// For other cases, we accept the risk since avoiding it could lead to the layout not being updated properly.
-				if (childMauiPlatformLayout is not null && child.Window is null)
-				{
-					childMauiPlatformLayout.InvalidateAncestorsMeasuresWhenMovedToWindow();
-					return;
-				}
-
-				var superview = child.Superview;
-				if (superview is null)
-				{
-					return;
-				}
-
-				// Now invalidate the parent view
-				var propagate = true;
-				var superviewMauiPlatformLayout = superview as UIScrollViewExt;
-				if (superviewMauiPlatformLayout is not null)
-				{
-					propagate = superviewMauiPlatformLayout.InvalidateMeasure(isPropagating: true);
-				}
-				else
-				{
-					superview.SetNeedsLayout();
-				}
-
-				if (!propagate)
-				{
-					// We've been asked to stop propagation, so let's stop here
-					return;
-				}
-
-				child = superview;
-				childMauiPlatformLayout = superviewMauiPlatformLayout;
-			}
-		}
-
-		internal static void InvalidateMeasure(UIView platformView)
-		{
-			var propagate = true;
-
-			if (platformView is UIScrollViewExt mauiPlatformView)
-			{
-				propagate = mauiPlatformView.InvalidateMeasure(false);
-			}
-			else
-			{
-				platformView.SetNeedsLayout();
-			}
-
-			if (propagate)
-			{
-				InvalidateAncestorsMeasures(platformView);
+				//_Log.Info("Reflection failed — fallback to SetNeedsLayout()");
+				view.SetNeedsLayout();
 			}
 		}
 	}
+
 }
