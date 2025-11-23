@@ -1,7 +1,9 @@
-using MauiView = Microsoft.Maui.Controls.View;
-using GestureStatus = Microsoft.Maui.GestureStatus;
-using UIKit;
 using CoreGraphics;
+using log4net;
+using Syncfusion.Maui.Toolkit.Charts;
+using UIKit;
+using GestureStatus = Microsoft.Maui.GestureStatus;
+using MauiView = Microsoft.Maui.Controls.View;
 
 namespace Syncfusion.Maui.Toolkit.Internals
 {
@@ -299,6 +301,8 @@ namespace Syncfusion.Maui.Toolkit.Internals
 						break;
 					case UIGestureRecognizerState.Ended:
 						state = GestureStatus.Completed;
+
+						RaiseOnTouchUp(locationInView);						
 						break;
 				}
 
@@ -310,7 +314,25 @@ namespace Syncfusion.Maui.Toolkit.Internals
 				}
 
 				GestureDetector.OnScroll((relativeTo) => TouchDetector.CalculatePosition(relativeTo, GestureDetector.MauiView, this), state, new Point(locationInView.X, locationInView.Y), new Point(translateLocation.X, translateLocation.Y), velocity);
+
 				SetTranslation(CGPoint.Empty, View);
+			}
+
+			private void RaiseOnTouchUp(CGPoint locationInView)
+			{
+				// S'assurer que ChartZoomPanBehavior reçoit bien OnTouchUp en RELEASE
+				try
+				{
+					if (GestureDetector?.MauiView is SfCartesianChart chart
+						&& chart.ZoomPanBehavior is ChartZoomPanBehavior zpb)
+					{
+						zpb.OnTouchUp(chart, (float)locationInView.X, (float)locationInView.Y);
+					}
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[GestureDetector] ERROR forwarding OnTouchUp: {ex}");
+				}
 			}
 
 			#endregion
