@@ -1,4 +1,5 @@
-﻿using Syncfusion.Maui.Toolkit.Graphics.Internals;
+﻿using log4net;
+using Syncfusion.Maui.Toolkit.Graphics.Internals;
 using Syncfusion.Maui.Toolkit.Internals;
 using Syncfusion.Maui.Toolkit.Themes;
 
@@ -931,22 +932,41 @@ namespace Syncfusion.Maui.Toolkit.Charts
 
 		internal override void OnLongPressActivation(IChart chart, float pointX, float pointY, GestureStatus status)
 		{
-			if (chart is SfCartesianChart cartesianChart)
+			if (chart is not SfCartesianChart cartesianChart)
+				return;
+
+			if (cartesianChart.ZoomPanBehavior is ChartZoomPanBehavior zp &&
+				zp.IsSelectionZoomingActivated)
+				return;
+
+			if (ActivationMode != ChartTrackballActivationMode.LongPress)
+				return;
+
+			if (status == GestureStatus.Started || status == GestureStatus.Running)
 			{
-				if ((cartesianChart.ZoomPanBehavior == null || cartesianChart.ZoomPanBehavior is ChartZoomPanBehavior behavior && !behavior.IsSelectionZoomingActivated)
-					&& ((status != GestureStatus.Completed && status != GestureStatus.Canceled) && ActivationMode == ChartTrackballActivationMode.LongPress))
+				IsPressed = true;
+				LongPressActive = true;
+				ResetLock();
+
+				if (!_hapticFired && HapticFeedback.Default.IsSupported)
 				{
-					IsPressed = true; // <--- élargi à toutes plateformes pour cohérence
-					LongPressActive = true;
-					ResetLock();
+					HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
+					_hapticFired = true;
+				}
 
-					if (!_hapticFired && HapticFeedback.Default.IsSupported)
-					{
-						HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-						_hapticFired = true;
-					}
+				Show(pointX, pointY);
+			}
+			else if (status == GestureStatus.Completed || status == GestureStatus.Canceled)
+			{
+				// correction bug trackball ne laisse plus pan le graphique après un long press
+				IsPressed = false;
+				LongPressActive = false;
+				_hapticFired = false;
 
-					Show(pointX, pointY); // suit le doigt pendant le long press
+				// on fige la position actuelle
+				if (!_isLocked)
+				{
+					LockCurrentPosition();
 				}
 			}
 		}
