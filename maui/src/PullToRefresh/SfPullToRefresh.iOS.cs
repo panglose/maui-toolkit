@@ -362,7 +362,7 @@ namespace Syncfusion.Maui.Toolkit.PullToRefresh
 						gesture2.State == UIGestureRecognizerState.Ended ||
 						gesture2.State == UIGestureRecognizerState.Cancelled)
 					{
-						if (SfPullToRefresh.PanGesture is not null)
+						if (SfPullToRefresh !=  null && SfPullToRefresh.PanGesture != null)
 						{
 							SfPullToRefresh.PanGesture.Enabled = true;
 						}
@@ -400,6 +400,13 @@ namespace Syncfusion.Maui.Toolkit.PullToRefresh
 					gesture2.Enabled = false;
 				}
 			}
+
+#if NET10_0_OR_GREATER && IOS
+			if (gesture2 is UIPanGestureRecognizer pan2 && pan2.Class != null && pan2.Class.Name != null && pan2.Class.Name.Equals("UIScrollViewPanGestureRecognizer", StringComparison.Ordinal))
+			{
+				return true;
+			}
+#endif
 
 			return false;
 		}
